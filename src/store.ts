@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Exercise, FoodEntry, Targets, WeightEntry, WorkoutEntry } from './types'
+import type { FoodDatabaseItem } from './data/foods'
 
 const DEFAULT_EXERCISES: Exercise[] = [
   { id: 'ex-squat', name: 'Squat' },
@@ -23,6 +24,7 @@ interface Store {
   exercises: Exercise[]
   workouts: WorkoutEntry[]
   foods: FoodEntry[]
+  customFoods: FoodDatabaseItem[]
   targets: Targets
 
   addWeight: (date: string, weight: number) => void
@@ -34,6 +36,7 @@ interface Store {
 
   addFood: (entry: Omit<FoodEntry, 'id'>) => void
   deleteFood: (id: string) => void
+  addCustomFood: (food: Omit<FoodDatabaseItem, 'id'>) => FoodDatabaseItem
 
   setTargets: (targets: Targets) => void
 }
@@ -49,6 +52,7 @@ export const useStore = create<Store>()(
       exercises: DEFAULT_EXERCISES,
       workouts: [],
       foods: [],
+      customFoods: [],
       targets: DEFAULT_TARGETS,
 
       addWeight: (date, weight) => {
@@ -74,6 +78,11 @@ export const useStore = create<Store>()(
 
       addFood: (entry) => set({ foods: [...get().foods, { ...entry, id: uid() }] }),
       deleteFood: (id) => set({ foods: get().foods.filter((f) => f.id !== id) }),
+      addCustomFood: (food) => {
+        const item: FoodDatabaseItem = { ...food, id: uid() }
+        set({ customFoods: [...get().customFoods, item] })
+        return item
+      },
 
       setTargets: (targets) => set({ targets }),
     }),

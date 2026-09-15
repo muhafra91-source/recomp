@@ -1,7 +1,7 @@
 export interface WeightEntry {
   id: string
   date: string // YYYY-MM-DD
-  weight: number // lbs
+  weight: number // kg
 }
 
 export interface Exercise {
@@ -26,6 +26,8 @@ export interface FoodEntry {
   date: string // YYYY-MM-DD
   time: string // HH:MM
   name: string
+  quantity?: number
+  unit?: string
   calories: number
   protein: number
   carbs: number

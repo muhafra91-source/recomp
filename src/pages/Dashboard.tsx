@@ -102,10 +102,10 @@ export function Dashboard({ onNavigate }: { onNavigate: (t: Tab) => void }) {
         />
         <StatTile
           label="Latest weight"
-          value={latestWeight ? `${latestWeight.weight} lbs` : '—'}
+          value={latestWeight ? `${latestWeight.weight} kg` : '—'}
           sub={
             weightDelta !== null
-              ? `${weightDelta >= 0 ? '+' : ''}${weightDelta.toFixed(1)} lbs vs prev`
+              ? `${weightDelta >= 0 ? '+' : ''}${weightDelta.toFixed(1)} kg vs prev`
               : latestWeight
                 ? 'First entry logged'
                 : 'No entries yet'

@@ -1,20 +1,55 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { useStore } from '../store'
-import { Button, Card, EmptyState, Input, ProgressBar, SectionTitle } from '../components/ui'
+import { Button, Card, EmptyState, Input, ProgressBar, SectionTitle, Select } from '../components/ui'
 import { addDaysISO, formatDateLabel, nowHM, todayISO } from '../lib/date'
+import { BUILTIN_FOODS, GENERIC_UNITS, computeMacros, unitsForFood } from '../data/foods'
+import type { FoodDatabaseItem } from '../data/foods'
 
-const emptyForm = { name: '', calories: '', protein: '', carbs: '', fat: '' }
+const emptyNewFood = { calories: '', protein: '', carbs: '', fat: '' }
 
 export function FoodPage() {
   const foods = useStore((s) => s.foods)
   const addFood = useStore((s) => s.addFood)
   const deleteFood = useStore((s) => s.deleteFood)
+  const customFoods = useStore((s) => s.customFoods)
+  const addCustomFood = useStore((s) => s.addCustomFood)
   const targets = useStore((s) => s.targets)
 
   const [date, setDate] = useState(todayISO())
-  const [form, setForm] = useState(emptyForm)
   const [showForm, setShowForm] = useState(false)
+  const [name, setName] = useState('')
+  const [unit, setUnit] = useState('g')
+  const [quantity, setQuantity] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [newFood, setNewFood] = useState(emptyNewFood)
+
+  const allFoods = useMemo(() => [...BUILTIN_FOODS, ...customFoods], [customFoods])
+  const matchedFood = useMemo(
+    () => allFoods.find((f) => f.name.toLowerCase() === name.trim().toLowerCase()),
+    [allFoods, name],
+  )
+  const unitOptions = matchedFood ? unitsForFood(matchedFood) : GENERIC_UNITS
+  const qtyNum = parseFloat(quantity)
+
+  const preview =
+    matchedFood && Number.isFinite(qtyNum) && qtyNum > 0 ? computeMacros(matchedFood, unit, qtyNum) : null
+  const newFoodPreview =
+    creating && Number.isFinite(qtyNum) && qtyNum > 0 && newFood.calories !== ''
+      ? computeMacros(
+          {
+            per100g: {
+              calories: parseFloat(newFood.calories) || 0,
+              protein: parseFloat(newFood.protein) || 0,
+              carbs: parseFloat(newFood.carbs) || 0,
+              fat: parseFloat(newFood.fat) || 0,
+            },
+            units: [],
+          },
+          unit,
+          qtyNum,
+        )
+      : null
 
   const dayFoods = useMemo(
     () => foods.filter((f) => f.date === date).sort((a, b) => a.time.localeCompare(b.time)),
@@ -35,20 +70,36 @@ export function FoodPage() {
     [dayFoods],
   )
 
-  function submit() {
-    const calories = parseFloat(form.calories) || 0
-    if (!form.name.trim() || calories <= 0) return
-    addFood({
-      date,
-      time: nowHM(),
-      name: form.name.trim(),
-      calories,
-      protein: parseFloat(form.protein) || 0,
-      carbs: parseFloat(form.carbs) || 0,
-      fat: parseFloat(form.fat) || 0,
-    })
-    setForm(emptyForm)
+  function resetForm() {
+    setName('')
+    setUnit('g')
+    setQuantity('')
+    setCreating(false)
+    setNewFood(emptyNewFood)
     setShowForm(false)
+  }
+
+  function submit() {
+    if (!Number.isFinite(qtyNum) || qtyNum <= 0) return
+
+    let food: FoodDatabaseItem | undefined = matchedFood
+    if (!food) {
+      if (!creating || !name.trim() || !newFood.calories) return
+      food = addCustomFood({
+        name: name.trim(),
+        per100g: {
+          calories: parseFloat(newFood.calories) || 0,
+          protein: parseFloat(newFood.protein) || 0,
+          carbs: parseFloat(newFood.carbs) || 0,
+          fat: parseFloat(newFood.fat) || 0,
+        },
+        units: [],
+      })
+    }
+
+    const macros = computeMacros(food, unit, qtyNum)
+    addFood({ date, time: nowHM(), name: food.name, quantity: qtyNum, unit, ...macros })
+    resetForm()
   }
 
   return (
@@ -99,45 +150,102 @@ export function FoodPage() {
         <Card>
           <SectionTitle>Add food</SectionTitle>
           <div className="flex flex-col gap-2.5">
-            <Input
-              label="Name"
-              placeholder="e.g. Chicken & rice"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              autoFocus
-            />
-            <div className="grid grid-cols-4 gap-2">
+            <div>
               <Input
-                label="Cal"
-                type="number"
-                inputMode="numeric"
-                value={form.calories}
-                onChange={(e) => setForm({ ...form, calories: e.target.value })}
+                label="Food"
+                list="food-options"
+                placeholder="e.g. Chicken Breast"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value)
+                  setUnit('g')
+                  setCreating(false)
+                }}
+                autoFocus
               />
-              <Input
-                label="Protein"
-                type="number"
-                inputMode="numeric"
-                value={form.protein}
-                onChange={(e) => setForm({ ...form, protein: e.target.value })}
-              />
-              <Input
-                label="Carbs"
-                type="number"
-                inputMode="numeric"
-                value={form.carbs}
-                onChange={(e) => setForm({ ...form, carbs: e.target.value })}
-              />
-              <Input
-                label="Fat"
-                type="number"
-                inputMode="numeric"
-                value={form.fat}
-                onChange={(e) => setForm({ ...form, fat: e.target.value })}
-              />
+              <datalist id="food-options">
+                {allFoods.map((f) => (
+                  <option key={f.id} value={f.name} />
+                ))}
+              </datalist>
             </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                label="Amount"
+                type="number"
+                inputMode="decimal"
+                placeholder="e.g. 150"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
+              <Select label="Unit" value={unit} onChange={(e) => setUnit(e.target.value)}>
+                {unitOptions.map((u) => (
+                  <option key={u.unit} value={u.unit}>
+                    {u.unit}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {matchedFood && preview && (
+              <p className="text-xs text-emerald-400">
+                {preview.calories} cal · P{preview.protein} C{preview.carbs} F{preview.fat}
+              </p>
+            )}
+
+            {!matchedFood && name.trim() && (
+              <div>
+                {!creating ? (
+                  <Button variant="secondary" onClick={() => setCreating(true)} className="w-full">
+                    "{name.trim()}" isn't in your list — add it
+                  </Button>
+                ) : (
+                  <div className="flex flex-col gap-2 rounded-xl bg-slate-900 p-3">
+                    <p className="text-xs text-slate-400">Nutrition per 100g of "{name.trim()}"</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      <Input
+                        label="Cal"
+                        type="number"
+                        inputMode="numeric"
+                        value={newFood.calories}
+                        onChange={(e) => setNewFood({ ...newFood, calories: e.target.value })}
+                      />
+                      <Input
+                        label="Protein"
+                        type="number"
+                        inputMode="numeric"
+                        value={newFood.protein}
+                        onChange={(e) => setNewFood({ ...newFood, protein: e.target.value })}
+                      />
+                      <Input
+                        label="Carbs"
+                        type="number"
+                        inputMode="numeric"
+                        value={newFood.carbs}
+                        onChange={(e) => setNewFood({ ...newFood, carbs: e.target.value })}
+                      />
+                      <Input
+                        label="Fat"
+                        type="number"
+                        inputMode="numeric"
+                        value={newFood.fat}
+                        onChange={(e) => setNewFood({ ...newFood, fat: e.target.value })}
+                      />
+                    </div>
+                    {newFoodPreview && (
+                      <p className="text-xs text-emerald-400">
+                        This amount: {newFoodPreview.calories} cal · P{newFoodPreview.protein} C
+                        {newFoodPreview.carbs} F{newFoodPreview.fat}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-2 mt-1">
-              <Button variant="secondary" onClick={() => setShowForm(false)} className="flex-1">
+              <Button variant="secondary" onClick={resetForm} className="flex-1">
                 Cancel
               </Button>
               <Button onClick={submit} className="flex-1">
@@ -163,7 +271,9 @@ export function FoodPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-white truncate">{f.name}</p>
                   <p className="text-xs text-slate-500">
-                    {f.time} · {f.calories} cal · P{f.protein} C{f.carbs} F{f.fat}
+                    {f.time}
+                    {f.quantity ? ` · ${f.quantity}${f.unit ?? ''}` : ''} · {f.calories} cal · P{f.protein} C
+                    {f.carbs} F{f.fat}
                   </p>
                 </div>
                 <button

@@ -43,7 +43,7 @@ export function WeightPage() {
             type="number"
             inputMode="decimal"
             step="0.1"
-            placeholder={todayEntry ? String(todayEntry.weight) : 'e.g. 165.4'}
+            placeholder={todayEntry ? String(todayEntry.weight) : 'e.g. 75.0'}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -52,7 +52,7 @@ export function WeightPage() {
             {todayEntry ? 'Update' : 'Log'}
           </Button>
         </div>
-        {todayEntry && <p className="text-xs text-slate-500 mt-2">Today logged: {todayEntry.weight} lbs</p>}
+        {todayEntry && <p className="text-xs text-slate-500 mt-2">Today logged: {todayEntry.weight} kg</p>}
       </Card>
 
       <Card>
@@ -100,7 +100,7 @@ export function WeightPage() {
               <li key={w.id} className="flex items-center justify-between py-2.5">
                 <span className="text-sm text-slate-300">{formatDateLabel(w.date)}</span>
                 <div className="flex items-center gap-3">
-                  <span className="font-semibold text-white">{w.weight} lbs</span>
+                  <span className="font-semibold text-white">{w.weight} kg</span>
                   <button
                     onClick={() => deleteWeight(w.id)}
                     className="text-slate-500 active:text-red-400"
