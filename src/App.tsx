@@ -11,16 +11,21 @@ export type Tab = 'dashboard' | 'today' | 'weight' | 'plan' | 'settings'
 function App() {
   const [tab, setTab] = useState<Tab>('today')
 
+  function handleTabChange(next: Tab) {
+    setTab(next)
+    window.scrollTo(0, 0)
+  }
+
   return (
     <div className="min-h-screen pb-24">
-      <div className="mx-auto max-w-md px-4 pt-6">
-        {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}
+      <div key={tab} className="mx-auto max-w-md px-4 pt-6 animate-fade-in-up">
+        {tab === 'dashboard' && <Dashboard onNavigate={handleTabChange} />}
         {tab === 'today' && <TodayPage />}
         {tab === 'weight' && <WeightPage />}
         {tab === 'plan' && <PlanPage />}
         {tab === 'settings' && <SettingsPage />}
       </div>
-      <BottomNav active={tab} onChange={setTab} />
+      <BottomNav active={tab} onChange={handleTabChange} />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import type {
   HabitLog,
   MedLog,
   Medication,
+  Milestone,
   PTExercise,
   PTLog,
   WeightEntry,
@@ -36,6 +37,7 @@ interface Store {
   ptLogs: PTLog[]
   habits: Habit[]
   habitLogs: HabitLog[]
+  milestones: Milestone[]
 
   saveCheckIn: (date: string, data: Omit<CheckIn, 'id' | 'date'>) => void
 
@@ -56,6 +58,9 @@ interface Store {
   addHabit: (name: string) => Habit
   deleteHabit: (id: string) => void
   toggleHabit: (date: string, habitId: string) => void
+
+  addMilestone: (date: string, title: string, notes?: string) => void
+  deleteMilestone: (id: string) => void
 }
 
 export const useStore = create<Store>()(
@@ -69,6 +74,7 @@ export const useStore = create<Store>()(
       ptLogs: [],
       habits: DEFAULT_HABITS,
       habitLogs: [],
+      milestones: [],
 
       saveCheckIn: (date, data) => {
         const existing = get().checkIns.find((c) => c.date === date)
@@ -154,6 +160,10 @@ export const useStore = create<Store>()(
           set({ habitLogs: [...get().habitLogs, { id: uid(), date, habitId }] })
         }
       },
+
+      addMilestone: (date, title, notes) =>
+        set({ milestones: [...get().milestones, { id: uid(), date, title, notes }] }),
+      deleteMilestone: (id) => set({ milestones: get().milestones.filter((m) => m.id !== id) }),
     }),
     { name: 'recovery-store' },
   ),

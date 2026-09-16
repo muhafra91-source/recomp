@@ -23,7 +23,7 @@ export function PlanPage() {
           <button
             key={t.id}
             onClick={() => setSub(t.id)}
-            className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium ${
+            className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${
               sub === t.id ? 'bg-teal-500 text-slate-900' : 'text-slate-400'
             }`}
           >

@@ -57,4 +57,11 @@ export interface HabitLog {
   habitId: string
 }
 
+export interface Milestone {
+  id: string
+  date: string // YYYY-MM-DD
+  title: string
+  notes?: string
+}
+
 export type DateRange = 'week' | 'month' | 'all'

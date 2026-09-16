@@ -2,7 +2,10 @@ import { useMemo, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, Flame, Pill } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, ScalePicker, SectionTitle, Textarea } from '../components/ui'
-import { addDaysISO, todayISO } from '../lib/date'
+import { StreakToast } from '../components/Toast'
+import { todayISO } from '../lib/date'
+import { STREAK_MILESTONES, habitStreak } from '../lib/scoring'
+import { fireConfetti } from '../lib/confetti'
 
 export function TodayPage() {
   const today = todayISO()
@@ -45,6 +48,8 @@ export function TodayPage() {
   const [ptDetail, setPtDetail] = useState('')
   const [ptPain, setPtPain] = useState('')
 
+  const [toast, setToast] = useState<string | null>(null)
+
   function saveCheckInNow() {
     saveCheckIn(today, {
       sleepHours: sleepHours ? parseFloat(sleepHours) : undefined,
@@ -82,20 +87,23 @@ export function TodayPage() {
     setExpandedPT(null)
   }
 
-  function habitStreak(habitId: string): number {
-    const doneDates = new Set(habitLogs.filter((l) => l.habitId === habitId).map((l) => l.date))
-    let cursor = doneDates.has(today) ? today : addDaysISO(today, -1)
-    if (!doneDates.has(cursor)) return 0
-    let streak = 0
-    while (doneDates.has(cursor)) {
-      streak++
-      cursor = addDaysISO(cursor, -1)
+  function handleToggleHabit(habitId: string, habitName: string) {
+    const wasDone = habitLogs.some((l) => l.date === today && l.habitId === habitId)
+    toggleHabit(today, habitId)
+    if (!wasDone) {
+      const simulatedLogs = [...habitLogs, { id: 'pending', date: today, habitId }]
+      const newStreak = habitStreak(simulatedLogs, habitId, today)
+      if (STREAK_MILESTONES.includes(newStreak)) {
+        fireConfetti()
+        setToast(`${newStreak}-day streak on ${habitName}! 🎉`)
+      }
     }
-    return streak
   }
 
   return (
     <div className="flex flex-col gap-5">
+      {toast && <StreakToast message={toast} onDone={() => setToast(null)} />}
+
       <div>
         <h1 className="text-xl font-bold text-white">Today</h1>
         <p className="text-sm text-slate-400">
@@ -130,7 +138,7 @@ export function TodayPage() {
           ) : (
             <button
               onClick={() => setShowNotes(true)}
-              className="text-xs font-medium text-teal-400 text-left"
+              className="text-xs font-medium text-teal-400 text-left transition-colors active:text-teal-300"
             >
               + Add a note
             </button>
@@ -182,8 +190,8 @@ export function TodayPage() {
                         <button
                           key={i}
                           onClick={() => (taken ? undoMedDose(med.id, today) : logMedDose(med.id, today))}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                            taken ? 'bg-teal-500 text-slate-900' : 'bg-slate-800 text-slate-500'
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90 ${
+                            taken ? 'bg-teal-500 text-slate-900 animate-pop' : 'bg-slate-800 text-slate-500'
                           }`}
                           aria-label={taken ? `Undo dose ${i + 1} of ${med.name}` : `Log dose ${i + 1} of ${med.name}`}
                         >
@@ -210,15 +218,15 @@ export function TodayPage() {
               const done = !!log
               const expanded = expandedPT === ex.id
               return (
-                <li key={ex.id} className="rounded-xl bg-slate-900/60 overflow-hidden">
+                <li key={ex.id} className="rounded-2xl bg-slate-900/60 overflow-hidden">
                   <button
                     onClick={() => toggleExercise(ex.id)}
-                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5"
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5 transition-colors active:bg-slate-800/60"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                          done ? 'bg-teal-500 text-slate-900' : 'border-2 border-slate-600'
+                        className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 ${
+                          done ? 'bg-teal-500 text-slate-900 animate-pop' : 'border-2 border-slate-600'
                         }`}
                       >
                         {done && <Check size={14} strokeWidth={3} />}
@@ -233,7 +241,7 @@ export function TodayPage() {
                     {done && (expanded ? <ChevronUp size={16} className="text-slate-500" /> : <ChevronDown size={16} className="text-slate-500" />)}
                   </button>
                   {done && expanded && (
-                    <div className="flex flex-col gap-2 px-3 pb-3">
+                    <div className="flex flex-col gap-2 px-3 pb-3 animate-fade-in-up">
                       <Input
                         label="Sets/reps or duration"
                         placeholder="e.g. 3x10 or 10 min"
@@ -266,17 +274,17 @@ export function TodayPage() {
           <ul className="flex flex-col gap-2">
             {habits.map((h) => {
               const done = habitLogs.some((l) => l.date === today && l.habitId === h.id)
-              const streak = habitStreak(h.id)
+              const streak = habitStreak(habitLogs, h.id, today)
               return (
                 <li key={h.id}>
                   <button
-                    onClick={() => toggleHabit(today, h.id)}
-                    className="w-full flex items-center justify-between gap-3 rounded-xl bg-slate-900/60 px-3 py-2.5"
+                    onClick={() => handleToggleHabit(h.id, h.name)}
+                    className="w-full flex items-center justify-between gap-3 rounded-2xl bg-slate-900/60 px-3 py-2.5 transition-colors active:bg-slate-800/60"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                          done ? 'bg-teal-500 text-slate-900' : 'border-2 border-slate-600'
+                        className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 ${
+                          done ? 'bg-teal-500 text-slate-900 animate-pop' : 'border-2 border-slate-600'
                         }`}
                       >
                         {done && <Check size={14} strokeWidth={3} />}

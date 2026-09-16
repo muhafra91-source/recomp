@@ -1,10 +1,10 @@
 import type { PropsWithChildren, ReactNode } from 'react'
 
 const PAIN_COLORS = [
-  'bg-teal-500', // 0 (unused)
-  'bg-teal-500',
-  'bg-teal-500',
-  'bg-teal-400',
+  'bg-emerald-500', // 0 (unused)
+  'bg-emerald-500',
+  'bg-emerald-500',
+  'bg-emerald-400',
   'bg-lime-500',
   'bg-yellow-500',
   'bg-amber-500',
@@ -16,7 +16,9 @@ const PAIN_COLORS = [
 
 export function Card({ children, className = '' }: PropsWithChildren<{ className?: string }>) {
   return (
-    <div className={`rounded-2xl bg-slate-800/60 border border-slate-700/60 p-4 ${className}`}>
+    <div
+      className={`rounded-3xl bg-slate-800/50 border border-slate-700/50 p-4 shadow-lg shadow-black/20 backdrop-blur-sm ${className}`}
+    >
       {children}
     </div>
   )
@@ -94,7 +96,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-xl px-4 py-3 text-sm transition-colors disabled:opacity-40 disabled:pointer-events-none ${variants[variant]} ${className}`}
+      className={`rounded-2xl px-4 py-3 text-sm transition-all duration-150 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none disabled:active:scale-100 ${variants[variant]} ${className}`}
       {...rest}
     >
       {children}
@@ -111,7 +113,7 @@ export function Input({
       {label && <span className="text-xs font-medium text-slate-400">{label}</span>}
       <input
         {...props}
-        className={`rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500 ${props.className ?? ''}`}
+        className={`rounded-2xl bg-slate-900/70 border border-slate-700/70 px-3 py-2.5 text-white placeholder:text-slate-500 transition-colors focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${props.className ?? ''}`}
       />
     </label>
   )
@@ -126,7 +128,7 @@ export function Textarea({
       {label && <span className="text-xs font-medium text-slate-400">{label}</span>}
       <textarea
         {...props}
-        className={`rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500 resize-none ${props.className ?? ''}`}
+        className={`rounded-2xl bg-slate-900/70 border border-slate-700/70 px-3 py-2.5 text-white placeholder:text-slate-500 transition-colors focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 resize-none ${props.className ?? ''}`}
       />
     </label>
   )
@@ -142,7 +144,7 @@ export function Select({
       {label && <span className="text-xs font-medium text-slate-400">{label}</span>}
       <select
         {...props}
-        className={`rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-white focus:outline-none focus:border-teal-500 ${props.className ?? ''}`}
+        className={`rounded-2xl bg-slate-900/70 border border-slate-700/70 px-3 py-2.5 text-white transition-colors focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 ${props.className ?? ''}`}
       >
         {children}
       </select>
@@ -182,8 +184,8 @@ export function ScalePicker({
               key={n}
               type="button"
               onClick={() => onChange(n)}
-              className={`flex-1 h-9 rounded-lg text-xs font-semibold transition-colors ${
-                active ? `${activeColor} text-slate-900` : 'bg-slate-800 text-slate-500'
+              className={`flex-1 h-9 rounded-xl text-xs font-semibold transition-all duration-150 active:scale-90 ${
+                active ? `${activeColor} text-slate-900 animate-pop` : 'bg-slate-800 text-slate-500'
               }`}
             >
               {n}

@@ -108,12 +108,12 @@ export function PlanMedications() {
                     const count = medLogs.filter((l) => l.medicationId === med.id && l.date === date).length
                     const ratio = count / med.timesPerDay
                     const color =
-                      ratio >= 1 ? 'bg-teal-500' : ratio > 0 ? 'bg-amber-500' : 'bg-slate-800'
+                      ratio >= 1 ? 'bg-emerald-500' : ratio > 0 ? 'bg-amber-500' : 'bg-slate-800'
                     return (
                       <div
                         key={date}
                         title={`${formatShort(date)}: ${count}/${med.timesPerDay}`}
-                        className={`flex-1 h-4 rounded ${color}`}
+                        className={`flex-1 h-4 rounded-md transition-transform duration-150 hover:scale-110 ${color}`}
                       />
                     )
                   })}

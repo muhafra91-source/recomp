@@ -1,9 +1,12 @@
 import { useMemo } from 'react'
-import { Flame, Heart, Moon, Pill, Scale, TrendingDown, TrendingUp, Minus } from 'lucide-react'
+import { Flame, Heart, Moon, Pill, Scale } from 'lucide-react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useStore } from '../store'
 import { Card, EmptyState, SectionTitle, StatTile } from '../components/ui'
-import { addDaysISO, daysAgoISO, formatShort, isWithinDays, todayISO } from '../lib/date'
+import { CalendarHeatmap } from '../components/CalendarHeatmap'
+import { MilestoneTimeline } from '../components/MilestoneTimeline'
+import { daysAgoISO, formatShort, isWithinDays, todayISO } from '../lib/date'
+import { habitStreak, scoreHex, weeklyRecap, weeklyRecoveryScore } from '../lib/scoring'
 import type { Tab } from '../App'
 
 function average(nums: number[]): number | null {
@@ -18,11 +21,31 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
   const medLogs = useStore((s) => s.medLogs)
   const allHabits = useStore((s) => s.habits)
   const habitLogs = useStore((s) => s.habitLogs)
+  const ptLogs = useStore((s) => s.ptLogs)
 
   const medications = useMemo(() => allMedications.filter((m) => !m.archived), [allMedications])
   const habits = useMemo(() => allHabits.filter((h) => !h.archived), [allHabits])
 
   const today = todayISO()
+
+  const weeklyScore = useMemo(
+    () => weeklyRecoveryScore(today, { checkIns, medications, medLogs, habits, habitLogs }),
+    [today, checkIns, medications, medLogs, habits, habitLogs],
+  )
+
+  const recap = useMemo(
+    () =>
+      weeklyRecap(today, {
+        checkIns,
+        weights,
+        medications,
+        medLogs,
+        ptLogDates: ptLogs.map((l) => l.date),
+        habits,
+        habitLogs,
+      }),
+    [today, checkIns, weights, medications, medLogs, ptLogs, habits, habitLogs],
+  )
 
   const last7Pain = useMemo(
     () =>
@@ -31,25 +54,10 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
       ),
     [checkIns],
   )
-  const prev7Pain = useMemo(() => {
-    const start = daysAgoISO(13)
-    const end = daysAgoISO(7)
-    return average(
-      checkIns.filter((c) => c.date >= start && c.date < end && c.pain !== undefined).map((c) => c.pain!),
-    )
-  }, [checkIns])
-
   const avgSleep7 = useMemo(
     () =>
       average(
         checkIns.filter((c) => isWithinDays(c.date, 7) && c.sleepHours !== undefined).map((c) => c.sleepHours!),
-      ),
-    [checkIns],
-  )
-  const avgEnergy7 = useMemo(
-    () =>
-      average(
-        checkIns.filter((c) => isWithinDays(c.date, 7) && c.energy !== undefined).map((c) => c.energy!),
       ),
     [checkIns],
   )
@@ -58,20 +66,6 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
     () => [...weights].sort((a, b) => b.date.localeCompare(a.date))[0],
     [weights],
   )
-
-  const medAdherence7 = useMemo(() => {
-    if (medications.length === 0) return null
-    let possible = 0
-    let taken = 0
-    for (let i = 0; i < 7; i++) {
-      const date = daysAgoISO(i)
-      for (const med of medications) {
-        possible += med.timesPerDay
-        taken += medLogs.filter((l) => l.medicationId === med.id && l.date === date).length
-      }
-    }
-    return possible > 0 ? Math.round((taken / possible) * 100) : null
-  }, [medications, medLogs])
 
   const painChartData = useMemo(() => {
     const days: { date: string; pain: number | null }[] = []
@@ -92,19 +86,9 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
     [weights],
   )
 
-  function habitStreak(habitId: string): number {
-    const doneDates = new Set(habitLogs.filter((l) => l.habitId === habitId).map((l) => l.date))
-    let cursor = doneDates.has(today) ? today : daysAgoISO(1)
-    if (!doneDates.has(cursor)) return 0
-    let streak = 0
-    while (doneDates.has(cursor)) {
-      streak++
-      cursor = addDaysISO(cursor, -1)
-    }
-    return streak
-  }
-
-  const painDelta = last7Pain !== null && prev7Pain !== null ? last7Pain - prev7Pain : null
+  const scorePct = weeklyScore.score ?? 0
+  const circumference = 2 * Math.PI * 52
+  const dashOffset = circumference * (1 - scorePct / 100)
 
   return (
     <div className="flex flex-col gap-5">
@@ -115,31 +99,33 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
         </p>
       </div>
 
-      <Card className="flex items-center gap-3 border bg-teal-500/10 border-teal-500/30">
-        {painDelta === null ? (
-          <Minus className="text-slate-400 shrink-0" size={26} />
-        ) : painDelta < -0.3 ? (
-          <TrendingDown className="text-teal-400 shrink-0" size={26} />
-        ) : painDelta > 0.3 ? (
-          <TrendingUp className="text-amber-400 shrink-0" size={26} />
-        ) : (
-          <Minus className="text-slate-300 shrink-0" size={26} />
-        )}
-        <div>
-          <p className="font-semibold text-white">
-            {painDelta === null
-              ? 'Keep logging to see trends'
-              : painDelta < -0.3
-                ? 'Pain trending down this week'
-                : painDelta > 0.3
-                  ? 'Pain trending up this week'
-                  : 'Pain holding steady this week'}
-          </p>
-          <p className="text-xs text-slate-400">
-            {painDelta === null
-              ? 'Log a check-in on most days to unlock weekly trends.'
-              : `Avg pain ${last7Pain!.toFixed(1)}/10 this week vs ${prev7Pain!.toFixed(1)}/10 last week.`}
-          </p>
+      <Card className="flex items-center gap-5">
+        <div className="relative shrink-0 w-28 h-28">
+          <svg viewBox="0 0 120 120" className="w-28 h-28 -rotate-90">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#1e293b" strokeWidth="10" />
+            {weeklyScore.score !== null && (
+              <circle
+                cx="60"
+                cy="60"
+                r="52"
+                fill="none"
+                stroke={scoreHex(weeklyScore.score)}
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                className="transition-all duration-700 ease-out"
+              />
+            )}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-3xl font-bold text-white">{weeklyScore.score ?? '—'}</span>
+            <span className="text-[10px] text-slate-400 uppercase tracking-wide">of 100</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1.5 min-w-0">
+          <p className="text-sm font-semibold text-white">Weekly recovery score</p>
+          <p className="text-xs text-slate-400 leading-relaxed">{recap}</p>
         </div>
       </Card>
 
@@ -159,16 +145,21 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
         <StatTile
           label="Avg sleep (7d)"
           value={avgSleep7 !== null ? `${avgSleep7.toFixed(1)}h` : '—'}
-          sub={avgEnergy7 !== null ? `Energy ${avgEnergy7.toFixed(1)}/10` : 'No data yet'}
+          sub={weeklyScore.sleep !== null ? `Sleep score ${weeklyScore.sleep}` : 'No data yet'}
           icon={<Moon size={16} />}
         />
         <StatTile
           label="Med adherence"
-          value={medAdherence7 !== null ? `${medAdherence7}%` : '—'}
+          value={weeklyScore.medAdherence !== null ? `${weeklyScore.medAdherence}%` : '—'}
           sub="last 7 days"
           icon={<Pill size={16} />}
         />
       </div>
+
+      <Card>
+        <SectionTitle>Recovery calendar</SectionTitle>
+        <CalendarHeatmap checkIns={checkIns} />
+      </Card>
 
       <Card>
         <SectionTitle>Pain level (14d)</SectionTitle>
@@ -179,7 +170,7 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
               <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
               <YAxis stroke="#64748b" fontSize={10} domain={[0, 10]} />
               <Tooltip
-                contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8 }}
+                contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }}
                 labelStyle={{ color: '#e2e8f0' }}
               />
               <Line
@@ -206,7 +197,7 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
               <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
               <YAxis stroke="#64748b" fontSize={10} domain={['dataMin - 2', 'dataMax + 2']} />
               <Tooltip
-                contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8 }}
+                contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }}
                 labelStyle={{ color: '#e2e8f0' }}
               />
               <Line type="monotone" dataKey="weight" stroke="#2dd4bf" strokeWidth={2} dot={{ r: 2 }} />
@@ -224,7 +215,7 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
         ) : (
           <ul className="flex flex-col divide-y divide-slate-700/50">
             {habits.map((h) => {
-              const streak = habitStreak(h.id)
+              const streak = habitStreak(habitLogs, h.id, today)
               return (
                 <li key={h.id} className="flex items-center justify-between py-2">
                   <span className="text-sm text-slate-300">{h.name}</span>
@@ -236,6 +227,11 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
             })}
           </ul>
         )}
+      </Card>
+
+      <Card>
+        <SectionTitle>Milestones</SectionTitle>
+        <MilestoneTimeline />
       </Card>
     </div>
   )

@@ -63,7 +63,7 @@ export function WeightPage() {
               <button
                 key={r}
                 onClick={() => setRange(r)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize transition-colors duration-200 ${
                   range === r ? 'bg-teal-500 text-slate-900' : 'text-slate-400'
                 }`}
               >
