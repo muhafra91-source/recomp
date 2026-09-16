@@ -14,6 +14,7 @@ export function FoodPage() {
   const deleteFood = useStore((s) => s.deleteFood)
   const customFoods = useStore((s) => s.customFoods)
   const addCustomFood = useStore((s) => s.addCustomFood)
+  const deleteCustomFood = useStore((s) => s.deleteCustomFood)
   const targets = useStore((s) => s.targets)
 
   const [date, setDate] = useState(todayISO())
@@ -24,6 +25,9 @@ export function FoodPage() {
   const [quantity, setQuantity] = useState('')
   const [creating, setCreating] = useState(false)
   const [newFood, setNewFood] = useState(emptyNewFood)
+
+  const [showManage, setShowManage] = useState(false)
+  const [manageForm, setManageForm] = useState({ name: '', ...emptyNewFood })
 
   const allFoods = useMemo(() => [...BUILTIN_FOODS, ...customFoods], [customFoods])
 
@@ -116,6 +120,22 @@ export function FoodPage() {
     const macros = computeMacros(food, unit, qtyNum)
     addFood({ date, time: nowHM(), name: food.name, quantity: qtyNum, unit, ...macros })
     resetForm()
+  }
+
+  function submitManageFood() {
+    if (!manageForm.name.trim() || !manageForm.calories) return
+    addCustomFood({
+      name: manageForm.name.trim(),
+      per100g: {
+        calories: parseFloat(manageForm.calories) || 0,
+        protein: parseFloat(manageForm.protein) || 0,
+        carbs: parseFloat(manageForm.carbs) || 0,
+        fat: parseFloat(manageForm.fat) || 0,
+      },
+      units: [],
+    })
+    setManageForm({ name: '', ...emptyNewFood })
+    setShowManage(false)
   }
 
   return (
@@ -286,6 +306,87 @@ export function FoodPage() {
           <Plus size={18} /> Log food
         </Button>
       )}
+
+      <Card>
+        <div className="flex items-center justify-between mb-2">
+          <SectionTitle>My foods</SectionTitle>
+          <button
+            onClick={() => setShowManage((v) => !v)}
+            className="text-xs font-medium text-emerald-400"
+          >
+            {showManage ? 'Cancel' : '+ Add food'}
+          </button>
+        </div>
+
+        {showManage && (
+          <div className="flex flex-col gap-2.5 mb-3 rounded-xl bg-slate-900 p-3">
+            <Input
+              label="Name"
+              placeholder="e.g. Mom's Lasagna"
+              value={manageForm.name}
+              onChange={(e) => setManageForm({ ...manageForm, name: e.target.value })}
+              autoFocus
+            />
+            <p className="text-xs text-slate-400">Nutrition per 100g</p>
+            <div className="grid grid-cols-4 gap-2">
+              <Input
+                label="Cal"
+                type="number"
+                inputMode="numeric"
+                value={manageForm.calories}
+                onChange={(e) => setManageForm({ ...manageForm, calories: e.target.value })}
+              />
+              <Input
+                label="Protein"
+                type="number"
+                inputMode="numeric"
+                value={manageForm.protein}
+                onChange={(e) => setManageForm({ ...manageForm, protein: e.target.value })}
+              />
+              <Input
+                label="Carbs"
+                type="number"
+                inputMode="numeric"
+                value={manageForm.carbs}
+                onChange={(e) => setManageForm({ ...manageForm, carbs: e.target.value })}
+              />
+              <Input
+                label="Fat"
+                type="number"
+                inputMode="numeric"
+                value={manageForm.fat}
+                onChange={(e) => setManageForm({ ...manageForm, fat: e.target.value })}
+              />
+            </div>
+            <Button onClick={submitManageFood}>Save food</Button>
+          </div>
+        )}
+
+        {customFoods.length === 0 ? (
+          <EmptyState text="No custom foods yet." />
+        ) : (
+          <ul className="flex flex-col divide-y divide-slate-700/50">
+            {customFoods.map((f) => (
+              <li key={f.id} className="flex items-center justify-between py-2.5 gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{f.name}</p>
+                  <p className="text-xs text-slate-500">
+                    Per 100g: {f.per100g.calories} cal · P{f.per100g.protein} C{f.per100g.carbs} F
+                    {f.per100g.fat}
+                  </p>
+                </div>
+                <button
+                  onClick={() => deleteCustomFood(f.id)}
+                  className="text-slate-500 active:text-red-400 shrink-0"
+                  aria-label={`Delete ${f.name} from my foods`}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <Card>
         <SectionTitle>Entries</SectionTitle>

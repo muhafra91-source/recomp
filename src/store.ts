@@ -37,6 +37,7 @@ interface Store {
   addFood: (entry: Omit<FoodEntry, 'id'>) => void
   deleteFood: (id: string) => void
   addCustomFood: (food: Omit<FoodDatabaseItem, 'id'>) => FoodDatabaseItem
+  deleteCustomFood: (id: string) => void
 
   setTargets: (targets: Targets) => void
 }
@@ -83,6 +84,7 @@ export const useStore = create<Store>()(
         set({ customFoods: [...get().customFoods, item] })
         return item
       },
+      deleteCustomFood: (id) => set({ customFoods: get().customFoods.filter((f) => f.id !== id) }),
 
       setTargets: (targets) => set({ targets }),
     }),
