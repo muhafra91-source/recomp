@@ -131,7 +131,7 @@ export function WorkoutsPage() {
                   <Input
                     type="number"
                     inputMode="decimal"
-                    placeholder="lbs"
+                    placeholder="kg"
                     value={s.weight}
                     onChange={(e) => updateSet(i, 'weight', e.target.value)}
                   />
