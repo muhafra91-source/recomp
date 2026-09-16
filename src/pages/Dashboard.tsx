@@ -1,39 +1,89 @@
 import { useMemo } from 'react'
-import { AlertTriangle, CheckCircle2, Dumbbell, Scale, Utensils } from 'lucide-react'
-import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Flame, Heart, Moon, Pill, Scale, TrendingDown, TrendingUp, Minus } from 'lucide-react'
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useStore } from '../store'
-import { Button, Card, EmptyState, ProgressBar, SectionTitle, StatTile } from '../components/ui'
-import { daysAgoISO, formatShort, isWithinDays, todayISO } from '../lib/date'
+import { Card, EmptyState, SectionTitle, StatTile } from '../components/ui'
+import { addDaysISO, daysAgoISO, formatShort, isWithinDays, todayISO } from '../lib/date'
 import type { Tab } from '../App'
 
-export function Dashboard({ onNavigate }: { onNavigate: (t: Tab) => void }) {
+function average(nums: number[]): number | null {
+  if (nums.length === 0) return null
+  return nums.reduce((a, b) => a + b, 0) / nums.length
+}
+
+export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) => void }) {
+  const checkIns = useStore((s) => s.checkIns)
   const weights = useStore((s) => s.weights)
-  const foods = useStore((s) => s.foods)
-  const targets = useStore((s) => s.targets)
+  const allMedications = useStore((s) => s.medications)
+  const medLogs = useStore((s) => s.medLogs)
+  const allHabits = useStore((s) => s.habits)
+  const habitLogs = useStore((s) => s.habitLogs)
+
+  const medications = useMemo(() => allMedications.filter((m) => !m.archived), [allMedications])
+  const habits = useMemo(() => allHabits.filter((h) => !h.archived), [allHabits])
 
   const today = todayISO()
 
-  const todayFoods = useMemo(() => foods.filter((f) => f.date === today), [foods, today])
-  const todayTotals = useMemo(
+  const last7Pain = useMemo(
     () =>
-      todayFoods.reduce(
-        (acc, f) => ({ calories: acc.calories + f.calories, protein: acc.protein + f.protein }),
-        { calories: 0, protein: 0 },
+      average(
+        checkIns.filter((c) => isWithinDays(c.date, 7) && c.pain !== undefined).map((c) => c.pain!),
       ),
-    [todayFoods],
+    [checkIns],
+  )
+  const prev7Pain = useMemo(() => {
+    const start = daysAgoISO(13)
+    const end = daysAgoISO(7)
+    return average(
+      checkIns.filter((c) => c.date >= start && c.date < end && c.pain !== undefined).map((c) => c.pain!),
+    )
+  }, [checkIns])
+
+  const avgSleep7 = useMemo(
+    () =>
+      average(
+        checkIns.filter((c) => isWithinDays(c.date, 7) && c.sleepHours !== undefined).map((c) => c.sleepHours!),
+      ),
+    [checkIns],
+  )
+  const avgEnergy7 = useMemo(
+    () =>
+      average(
+        checkIns.filter((c) => isWithinDays(c.date, 7) && c.energy !== undefined).map((c) => c.energy!),
+      ),
+    [checkIns],
   )
 
   const latestWeight = useMemo(
     () => [...weights].sort((a, b) => b.date.localeCompare(a.date))[0],
     [weights],
   )
-  const prevWeight = useMemo(() => {
-    const sorted = [...weights].sort((a, b) => b.date.localeCompare(a.date))
-    return sorted[1]
-  }, [weights])
-  const weightDelta = latestWeight && prevWeight ? latestWeight.weight - prevWeight.weight : null
 
-  const weekWeights = useMemo(
+  const medAdherence7 = useMemo(() => {
+    if (medications.length === 0) return null
+    let possible = 0
+    let taken = 0
+    for (let i = 0; i < 7; i++) {
+      const date = daysAgoISO(i)
+      for (const med of medications) {
+        possible += med.timesPerDay
+        taken += medLogs.filter((l) => l.medicationId === med.id && l.date === date).length
+      }
+    }
+    return possible > 0 ? Math.round((taken / possible) * 100) : null
+  }, [medications, medLogs])
+
+  const painChartData = useMemo(() => {
+    const days: { date: string; pain: number | null }[] = []
+    for (let i = 13; i >= 0; i--) {
+      const date = daysAgoISO(i)
+      const c = checkIns.find((c) => c.date === date)
+      days.push({ date: formatShort(date), pain: c?.pain ?? null })
+    }
+    return days
+  }, [checkIns])
+
+  const weightChartData = useMemo(
     () =>
       [...weights]
         .filter((w) => isWithinDays(w.date, 30))
@@ -42,19 +92,19 @@ export function Dashboard({ onNavigate }: { onNavigate: (t: Tab) => void }) {
     [weights],
   )
 
-  const calorieConsistency = useMemo(() => {
-    const days: { date: string; calories: number; hit: boolean }[] = []
-    for (let i = 6; i >= 0; i--) {
-      const iso = daysAgoISO(i)
-      const cals = foods.filter((f) => f.date === iso).reduce((sum, f) => sum + f.calories, 0)
-      days.push({ date: formatShort(iso), calories: cals, hit: cals >= targets.calories * 0.9 })
+  function habitStreak(habitId: string): number {
+    const doneDates = new Set(habitLogs.filter((l) => l.habitId === habitId).map((l) => l.date))
+    let cursor = doneDates.has(today) ? today : daysAgoISO(1)
+    if (!doneDates.has(cursor)) return 0
+    let streak = 0
+    while (doneDates.has(cursor)) {
+      streak++
+      cursor = addDaysISO(cursor, -1)
     }
-    return days
-  }, [foods, targets])
+    return streak
+  }
 
-  const calProgress = targets.calories > 0 ? todayTotals.calories / targets.calories : 0
-  const proProgress = targets.protein > 0 ? todayTotals.protein / targets.protein : 0
-  const onTrack = calProgress >= 0.9 && calProgress <= 1.15 && proProgress >= 0.9
+  const painDelta = last7Pain !== null && prev7Pain !== null ? last7Pain - prev7Pain : null
 
   return (
     <div className="flex flex-col gap-5">
@@ -65,105 +115,93 @@ export function Dashboard({ onNavigate }: { onNavigate: (t: Tab) => void }) {
         </p>
       </div>
 
-      <Card
-        className={`flex items-center gap-3 border ${
-          onTrack ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'
-        }`}
-      >
-        {onTrack ? (
-          <CheckCircle2 className="text-emerald-400 shrink-0" size={28} />
+      <Card className="flex items-center gap-3 border bg-teal-500/10 border-teal-500/30">
+        {painDelta === null ? (
+          <Minus className="text-slate-400 shrink-0" size={26} />
+        ) : painDelta < -0.3 ? (
+          <TrendingDown className="text-teal-400 shrink-0" size={26} />
+        ) : painDelta > 0.3 ? (
+          <TrendingUp className="text-amber-400 shrink-0" size={26} />
         ) : (
-          <AlertTriangle className="text-amber-400 shrink-0" size={28} />
+          <Minus className="text-slate-300 shrink-0" size={26} />
         )}
         <div>
-          <p className={`font-semibold ${onTrack ? 'text-emerald-300' : 'text-amber-300'}`}>
-            {onTrack ? "On track today" : 'Not there yet today'}
+          <p className="font-semibold text-white">
+            {painDelta === null
+              ? 'Keep logging to see trends'
+              : painDelta < -0.3
+                ? 'Pain trending down this week'
+                : painDelta > 0.3
+                  ? 'Pain trending up this week'
+                  : 'Pain holding steady this week'}
           </p>
           <p className="text-xs text-slate-400">
-            {onTrack
-              ? 'Calories and protein are on target.'
-              : 'Log more food to hit your calorie and protein targets.'}
+            {painDelta === null
+              ? 'Log a check-in on most days to unlock weekly trends.'
+              : `Avg pain ${last7Pain!.toFixed(1)}/10 this week vs ${prev7Pain!.toFixed(1)}/10 last week.`}
           </p>
         </div>
       </Card>
 
       <div className="grid grid-cols-2 gap-3">
         <StatTile
-          label="Calories"
-          value={`${todayTotals.calories}`}
-          sub={`of ${targets.calories} target`}
-          icon={<Utensils size={16} />}
-        />
-        <StatTile
-          label="Protein"
-          value={`${todayTotals.protein}g`}
-          sub={`of ${targets.protein}g target`}
-          icon={<Utensils size={16} />}
-        />
-        <StatTile
           label="Latest weight"
           value={latestWeight ? `${latestWeight.weight} kg` : '—'}
-          sub={
-            weightDelta !== null
-              ? `${weightDelta >= 0 ? '+' : ''}${weightDelta.toFixed(1)} kg vs prev`
-              : latestWeight
-                ? 'First entry logged'
-                : 'No entries yet'
-          }
+          sub={latestWeight ? formatShort(latestWeight.date) : 'No entries yet'}
           icon={<Scale size={16} />}
         />
         <StatTile
-          label="Calories left"
-          value={`${Math.max(0, targets.calories - todayTotals.calories)}`}
-          sub="to hit target"
-          icon={<Utensils size={16} />}
+          label="Avg pain (7d)"
+          value={last7Pain !== null ? last7Pain.toFixed(1) : '—'}
+          sub="out of 10"
+          icon={<Heart size={16} />}
+        />
+        <StatTile
+          label="Avg sleep (7d)"
+          value={avgSleep7 !== null ? `${avgSleep7.toFixed(1)}h` : '—'}
+          sub={avgEnergy7 !== null ? `Energy ${avgEnergy7.toFixed(1)}/10` : 'No data yet'}
+          icon={<Moon size={16} />}
+        />
+        <StatTile
+          label="Med adherence"
+          value={medAdherence7 !== null ? `${medAdherence7}%` : '—'}
+          sub="last 7 days"
+          icon={<Pill size={16} />}
         />
       </div>
 
       <Card>
-        <SectionTitle>Today's progress</SectionTitle>
-        <div className="flex flex-col gap-3">
-          <div>
-            <div className="flex justify-between text-xs text-slate-400 mb-1">
-              <span>Calories</span>
-              <span>
-                {todayTotals.calories} / {targets.calories}
-              </span>
-            </div>
-            <ProgressBar value={todayTotals.calories} target={targets.calories} color="bg-emerald-500" />
-          </div>
-          <div>
-            <div className="flex justify-between text-xs text-slate-400 mb-1">
-              <span>Protein</span>
-              <span>
-                {todayTotals.protein}g / {targets.protein}g
-              </span>
-            </div>
-            <ProgressBar value={todayTotals.protein} target={targets.protein} color="bg-sky-500" />
-          </div>
-        </div>
+        <SectionTitle>Pain level (14d)</SectionTitle>
+        {painChartData.some((d) => d.pain !== null) ? (
+          <ResponsiveContainer width="100%" height={160}>
+            <LineChart data={painChartData} margin={{ left: -20, right: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
+              <YAxis stroke="#64748b" fontSize={10} domain={[0, 10]} />
+              <Tooltip
+                contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8 }}
+                labelStyle={{ color: '#e2e8f0' }}
+              />
+              <Line
+                type="monotone"
+                dataKey="pain"
+                stroke="#fb923c"
+                strokeWidth={2}
+                dot={{ r: 2 }}
+                connectNulls
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <EmptyState text="Log pain in your daily check-in to see this trend." />
+        )}
       </Card>
-
-      <div className="grid grid-cols-3 gap-2">
-        <Button variant="secondary" onClick={() => onNavigate('food')} className="flex flex-col items-center gap-1 py-3">
-          <Utensils size={18} />
-          <span className="text-xs">Log food</span>
-        </Button>
-        <Button variant="secondary" onClick={() => onNavigate('workouts')} className="flex flex-col items-center gap-1 py-3">
-          <Dumbbell size={18} />
-          <span className="text-xs">Log workout</span>
-        </Button>
-        <Button variant="secondary" onClick={() => onNavigate('weight')} className="flex flex-col items-center gap-1 py-3">
-          <Scale size={18} />
-          <span className="text-xs">Log weight</span>
-        </Button>
-      </div>
 
       <Card>
         <SectionTitle>Weight trend (30d)</SectionTitle>
-        {weekWeights.length > 1 ? (
+        {weightChartData.length > 1 ? (
           <ResponsiveContainer width="100%" height={160}>
-            <LineChart data={weekWeights} margin={{ left: -20, right: 10 }}>
+            <LineChart data={weightChartData} margin={{ left: -20, right: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
               <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
               <YAxis stroke="#64748b" fontSize={10} domain={['dataMin - 2', 'dataMax + 2']} />
@@ -171,7 +209,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (t: Tab) => void }) {
                 contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8 }}
                 labelStyle={{ color: '#e2e8f0' }}
               />
-              <Line type="monotone" dataKey="weight" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} />
+              <Line type="monotone" dataKey="weight" stroke="#2dd4bf" strokeWidth={2} dot={{ r: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         ) : (
@@ -180,23 +218,24 @@ export function Dashboard({ onNavigate }: { onNavigate: (t: Tab) => void }) {
       </Card>
 
       <Card>
-        <SectionTitle>Calorie consistency (7d)</SectionTitle>
-        <ResponsiveContainer width="100%" height={140}>
-          <BarChart data={calorieConsistency} margin={{ left: -20, right: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
-            <YAxis stroke="#64748b" fontSize={10} />
-            <Tooltip
-              contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8 }}
-              labelStyle={{ color: '#e2e8f0' }}
-            />
-            <Bar dataKey="calories" radius={[4, 4, 0, 0]}>
-              {calorieConsistency.map((d, i) => (
-                <Cell key={i} fill={d.hit ? '#10b981' : '#475569'} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        <SectionTitle>Habit streaks</SectionTitle>
+        {habits.length === 0 ? (
+          <EmptyState text="No habits added yet." />
+        ) : (
+          <ul className="flex flex-col divide-y divide-slate-700/50">
+            {habits.map((h) => {
+              const streak = habitStreak(h.id)
+              return (
+                <li key={h.id} className="flex items-center justify-between py-2">
+                  <span className="text-sm text-slate-300">{h.name}</span>
+                  <span className="flex items-center gap-1 text-xs font-semibold text-amber-400">
+                    <Flame size={13} /> {streak} day{streak === 1 ? '' : 's'}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </Card>
     </div>
   )

@@ -1,5 +1,19 @@
 import type { PropsWithChildren, ReactNode } from 'react'
 
+const PAIN_COLORS = [
+  'bg-teal-500', // 0 (unused)
+  'bg-teal-500',
+  'bg-teal-500',
+  'bg-teal-400',
+  'bg-lime-500',
+  'bg-yellow-500',
+  'bg-amber-500',
+  'bg-orange-500',
+  'bg-orange-600',
+  'bg-red-500',
+  'bg-red-600',
+]
+
 export function Card({ children, className = '' }: PropsWithChildren<{ className?: string }>) {
   return (
     <div className={`rounded-2xl bg-slate-800/60 border border-slate-700/60 p-4 ${className}`}>
@@ -15,7 +29,7 @@ export function SectionTitle({ children }: PropsWithChildren) {
 export function ProgressBar({
   value,
   target,
-  color = 'bg-emerald-500',
+  color = 'bg-teal-500',
 }: {
   value: number
   target: number
@@ -70,7 +84,7 @@ export function Button({
   } & React.ButtonHTMLAttributes<HTMLButtonElement>
 >) {
   const variants: Record<string, string> = {
-    primary: 'bg-emerald-500 text-slate-900 font-semibold active:bg-emerald-400',
+    primary: 'bg-teal-500 text-slate-900 font-semibold active:bg-teal-400',
     secondary: 'bg-slate-700 text-slate-100 font-medium active:bg-slate-600',
     danger: 'bg-red-500/15 text-red-400 font-medium active:bg-red-500/25',
     ghost: 'bg-transparent text-slate-300 font-medium active:bg-slate-800',
@@ -97,7 +111,22 @@ export function Input({
       {label && <span className="text-xs font-medium text-slate-400">{label}</span>}
       <input
         {...props}
-        className={`rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 ${props.className ?? ''}`}
+        className={`rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500 ${props.className ?? ''}`}
+      />
+    </label>
+  )
+}
+
+export function Textarea({
+  label,
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string }) {
+  return (
+    <label className="flex flex-col gap-1 text-sm text-slate-300 w-full">
+      {label && <span className="text-xs font-medium text-slate-400">{label}</span>}
+      <textarea
+        {...props}
+        className={`rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500 resize-none ${props.className ?? ''}`}
       />
     </label>
   )
@@ -113,7 +142,7 @@ export function Select({
       {label && <span className="text-xs font-medium text-slate-400">{label}</span>}
       <select
         {...props}
-        className={`rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500 ${props.className ?? ''}`}
+        className={`rounded-xl bg-slate-900 border border-slate-700 px-3 py-2.5 text-white focus:outline-none focus:border-teal-500 ${props.className ?? ''}`}
       >
         {children}
       </select>
@@ -123,4 +152,45 @@ export function Select({
 
 export function EmptyState({ text }: { text: string }) {
   return <div className="text-center text-sm text-slate-500 py-8">{text}</div>
+}
+
+export function ScalePicker({
+  label,
+  value,
+  onChange,
+  max = 10,
+  colorScale = false,
+}: {
+  label: string
+  value: number | undefined
+  onChange: (n: number) => void
+  max?: number
+  colorScale?: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex justify-between items-baseline">
+        <span className="text-xs font-medium text-slate-400">{label}</span>
+        {value !== undefined && <span className="text-sm font-semibold text-white">{value}</span>}
+      </div>
+      <div className="flex gap-1">
+        {Array.from({ length: max }, (_, i) => i + 1).map((n) => {
+          const active = value === n
+          const activeColor = colorScale ? PAIN_COLORS[Math.min(n, 10)] : 'bg-teal-500'
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              className={`flex-1 h-9 rounded-lg text-xs font-semibold transition-colors ${
+                active ? `${activeColor} text-slate-900` : 'bg-slate-800 text-slate-500'
+              }`}
+            >
+              {n}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }

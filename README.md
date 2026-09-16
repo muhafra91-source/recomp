@@ -1,14 +1,14 @@
-# recomp
+# Mend
 
-A personal fitness & nutrition tracker for post-surgery muscle and weight gain.
+A personal recovery and habit tracker for post-surgery recovery alongside fitness goals.
 
 ## Features
 
-- **Weight** — log daily body weight, view week/month/all-time trend graph
-- **Workouts** — log sets/reps/weight per exercise, add custom exercises, view history and per-exercise progress charts
-- **Food** — log meals with calories/protein/carbs/fat, daily totals vs. targets, browse past days
-- **Dashboard** — daily summary, on-track indicator, weight trend, 7-day calorie consistency chart
-- **Settings** — set daily calorie/macro targets, export a local JSON backup
+- **Today** — a single daily hub: sleep/pain/energy check-in with an optional note, quick weight log, and checklists for medications, PT exercises, and habits — all in under a minute
+- **Weight** — log daily body weight in kg, view week/month/all-time trend graph
+- **Plan** — manage medications (dosage, times per day, adherence history), PT exercises (custom, with completion history and pain notes), and habits (with streak tracking)
+- **Overview** — weekly pain/sleep/adherence trends, a plain-language "how's my recovery going" summary, weight trend, and habit streaks at a glance
+- **Settings** — export a local JSON backup
 
 All data is stored in the browser's `localStorage` — no backend, no account, works offline. Use **Settings → Export backup** periodically to keep a copy of your data.
 

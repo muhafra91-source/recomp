@@ -1,44 +1,60 @@
+export interface CheckIn {
+  id: string
+  date: string // YYYY-MM-DD
+  sleepHours?: number
+  sleepQuality?: number // 1-5
+  pain?: number // 1-10
+  energy?: number // 1-10
+  notes?: string
+}
+
 export interface WeightEntry {
   id: string
   date: string // YYYY-MM-DD
   weight: number // kg
 }
 
-export interface Exercise {
+export interface Medication {
   id: string
   name: string
+  dosage: string
+  timesPerDay: number
+  notes?: string
+  archived?: boolean
 }
 
-export interface SetEntry {
-  reps: number
-  weight: number
+export interface MedLog {
+  id: string
+  medicationId: string
+  date: string // YYYY-MM-DD
+  time: string // HH:MM
 }
 
-export interface WorkoutEntry {
+export interface PTExercise {
+  id: string
+  name: string
+  target?: string // e.g. "3x10" or "10 min"
+  archived?: boolean
+}
+
+export interface PTLog {
   id: string
   date: string // YYYY-MM-DD
   exerciseId: string
-  sets: SetEntry[]
+  detail?: string
+  painNote?: string
 }
 
-export interface FoodEntry {
+export interface Habit {
+  id: string
+  name: string
+  archived?: boolean
+}
+
+export interface HabitLog {
   id: string
   date: string // YYYY-MM-DD
-  time: string // HH:MM
-  name: string
-  quantity?: number
-  unit?: string
-  calories: number
-  protein: number
-  carbs: number
-  fat: number
-}
-
-export interface Targets {
-  calories: number
-  protein: number
-  carbs: number
-  fat: number
+  habitId: string
 }
 
 export type DateRange = 'week' | 'month' | 'all'

@@ -64,7 +64,7 @@ export function WeightPage() {
                 key={r}
                 onClick={() => setRange(r)}
                 className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize ${
-                  range === r ? 'bg-emerald-500 text-slate-900' : 'text-slate-400'
+                  range === r ? 'bg-teal-500 text-slate-900' : 'text-slate-400'
                 }`}
               >
                 {r}
@@ -82,7 +82,7 @@ export function WeightPage() {
                 contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8 }}
                 labelStyle={{ color: '#e2e8f0' }}
               />
-              <Line type="monotone" dataKey="weight" stroke="#10b981" strokeWidth={2} dot={{ r: 2 }} />
+              <Line type="monotone" dataKey="weight" stroke="#2dd4bf" strokeWidth={2} dot={{ r: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         ) : (
