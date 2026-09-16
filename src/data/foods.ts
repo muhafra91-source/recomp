@@ -61,6 +61,11 @@ export const BUILTIN_FOODS: FoodDatabaseItem[] = [
   { id: 'cottage-cheese', name: 'Cottage Cheese, low fat', per100g: { calories: 98, protein: 11, carbs: 3.4, fat: 4.3 }, units: [{ unit: 'cup', grams: 226 }] },
   { id: 'whey-protein', name: 'Whey Protein Powder', per100g: { calories: 400, protein: 80, carbs: 8, fat: 5 }, units: [{ unit: 'scoop', grams: 30 }] },
   { id: 'tofu', name: 'Tofu, firm', per100g: { calories: 144, protein: 15, carbs: 3, fat: 8 }, units: [] },
+  { id: 'ground-turkey', name: 'Ground Turkey, cooked', per100g: { calories: 189, protein: 27, carbs: 0, fat: 8 }, units: [] },
+  { id: 'bacon', name: 'Bacon, cooked', per100g: { calories: 541, protein: 37, carbs: 1.4, fat: 42 }, units: [{ unit: 'slice', grams: 8 }] },
+  { id: 'ham', name: 'Ham, sliced', per100g: { calories: 145, protein: 21, carbs: 1.5, fat: 6 }, units: [{ unit: 'slice', grams: 28 }] },
+  { id: 'yogurt', name: 'Yogurt, plain whole milk', per100g: { calories: 61, protein: 3.5, carbs: 4.7, fat: 3.3 }, units: [{ unit: 'cup', grams: 245 }] },
+  { id: 'protein-shake', name: 'Protein Shake, premade', per100g: { calories: 67, protein: 10, carbs: 4, fat: 1.5 }, units: [{ unit: 'bottle', grams: 330 }] },
 
   // Carbs
   { id: 'white-rice', name: 'White Rice, cooked', per100g: { calories: 130, protein: 2.7, carbs: 28, fat: 0.3 }, units: [{ unit: 'cup cooked', grams: 158 }] },
@@ -77,6 +82,13 @@ export const BUILTIN_FOODS: FoodDatabaseItem[] = [
   { id: 'orange', name: 'Orange', per100g: { calories: 47, protein: 0.9, carbs: 12, fat: 0.1 }, units: [{ unit: 'medium', grams: 131 }] },
   { id: 'blueberries', name: 'Blueberries', per100g: { calories: 57, protein: 0.7, carbs: 14, fat: 0.3 }, units: [{ unit: 'cup', grams: 148 }] },
   { id: 'strawberries', name: 'Strawberries', per100g: { calories: 32, protein: 0.7, carbs: 8, fat: 0.3 }, units: [{ unit: 'cup', grams: 152 }] },
+  { id: 'cereal', name: 'Cereal, corn flakes', per100g: { calories: 357, protein: 7, carbs: 84, fat: 0.9 }, units: [{ unit: 'cup', grams: 28 }] },
+  { id: 'bagel', name: 'Bagel, plain', per100g: { calories: 257, protein: 10, carbs: 50, fat: 1.5 }, units: [{ unit: 'bagel', grams: 105 }] },
+  { id: 'tortilla', name: 'Tortilla, flour', per100g: { calories: 312, protein: 8, carbs: 51, fat: 8 }, units: [{ unit: 'tortilla', grams: 49 }] },
+  { id: 'chickpeas', name: 'Chickpeas, cooked', per100g: { calories: 164, protein: 9, carbs: 27, fat: 2.6 }, units: [{ unit: 'cup', grams: 164 }] },
+  { id: 'black-beans', name: 'Black Beans, cooked', per100g: { calories: 132, protein: 8.9, carbs: 24, fat: 0.5 }, units: [{ unit: 'cup', grams: 172 }] },
+  { id: 'lentils', name: 'Lentils, cooked', per100g: { calories: 116, protein: 9, carbs: 20, fat: 0.4 }, units: [{ unit: 'cup', grams: 198 }] },
+  { id: 'honey', name: 'Honey', per100g: { calories: 304, protein: 0.3, carbs: 82, fat: 0 }, units: [{ unit: 'tbsp', grams: 21 }] },
 
   // Fats & misc
   { id: 'peanut-butter', name: 'Peanut Butter', per100g: { calories: 588, protein: 25, carbs: 20, fat: 50 }, units: [{ unit: 'tbsp', grams: 16 }, { unit: 'tsp', grams: 5.3 }] },
@@ -100,4 +112,8 @@ export const BUILTIN_FOODS: FoodDatabaseItem[] = [
   { id: 'granola-bar', name: 'Granola Bar', per100g: { calories: 471, protein: 10, carbs: 64, fat: 20 }, units: [{ unit: 'bar', grams: 40 }] },
   { id: 'pizza', name: 'Pizza, cheese', per100g: { calories: 266, protein: 11, carbs: 33, fat: 10 }, units: [{ unit: 'slice', grams: 107 }] },
   { id: 'hamburger', name: 'Hamburger, plain', per100g: { calories: 250, protein: 12, carbs: 30, fat: 9 }, units: [{ unit: 'burger', grams: 200 }] },
+  { id: 'french-fries', name: 'French Fries', per100g: { calories: 312, protein: 3.4, carbs: 41, fat: 15 }, units: [] },
+  { id: 'chicken-nuggets', name: 'Chicken Nuggets', per100g: { calories: 296, protein: 15, carbs: 17, fat: 19 }, units: [{ unit: 'piece', grams: 18 }] },
+  { id: 'ice-cream', name: 'Ice Cream, vanilla', per100g: { calories: 207, protein: 3.5, carbs: 24, fat: 11 }, units: [{ unit: 'scoop', grams: 66 }] },
+  { id: 'popcorn', name: 'Popcorn, air-popped', per100g: { calories: 387, protein: 13, carbs: 78, fat: 4.5 }, units: [{ unit: 'cup', grams: 8 }] },
 ]

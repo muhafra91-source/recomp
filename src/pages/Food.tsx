@@ -19,16 +19,25 @@ export function FoodPage() {
   const [date, setDate] = useState(todayISO())
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
+  const [selectedFoodId, setSelectedFoodId] = useState<string | null>(null)
   const [unit, setUnit] = useState('g')
   const [quantity, setQuantity] = useState('')
   const [creating, setCreating] = useState(false)
   const [newFood, setNewFood] = useState(emptyNewFood)
 
   const allFoods = useMemo(() => [...BUILTIN_FOODS, ...customFoods], [customFoods])
-  const matchedFood = useMemo(
-    () => allFoods.find((f) => f.name.toLowerCase() === name.trim().toLowerCase()),
-    [allFoods, name],
-  )
+
+  const suggestions = useMemo(() => {
+    const q = name.trim().toLowerCase()
+    if (!q || selectedFoodId) return []
+    return allFoods.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8)
+  }, [allFoods, name, selectedFoodId])
+
+  const matchedFood = useMemo(() => {
+    if (selectedFoodId) return allFoods.find((f) => f.id === selectedFoodId)
+    return allFoods.find((f) => f.name.toLowerCase() === name.trim().toLowerCase())
+  }, [allFoods, selectedFoodId, name])
+
   const unitOptions = matchedFood ? unitsForFood(matchedFood) : GENERIC_UNITS
   const qtyNum = parseFloat(quantity)
 
@@ -72,11 +81,18 @@ export function FoodPage() {
 
   function resetForm() {
     setName('')
+    setSelectedFoodId(null)
     setUnit('g')
     setQuantity('')
     setCreating(false)
     setNewFood(emptyNewFood)
     setShowForm(false)
+  }
+
+  function selectSuggestion(food: FoodDatabaseItem) {
+    setName(food.name)
+    setSelectedFoodId(food.id)
+    setUnit('g')
   }
 
   function submit() {
@@ -150,24 +166,35 @@ export function FoodPage() {
         <Card>
           <SectionTitle>Add food</SectionTitle>
           <div className="flex flex-col gap-2.5">
-            <div>
+            <div className="relative">
               <Input
                 label="Food"
-                list="food-options"
-                placeholder="e.g. Chicken Breast"
+                placeholder="e.g. chicken"
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value)
+                  setSelectedFoodId(null)
                   setUnit('g')
                   setCreating(false)
                 }}
+                autoComplete="off"
                 autoFocus
               />
-              <datalist id="food-options">
-                {allFoods.map((f) => (
-                  <option key={f.id} value={f.name} />
-                ))}
-              </datalist>
+              {suggestions.length > 0 && (
+                <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 shadow-lg">
+                  {suggestions.map((f) => (
+                    <li key={f.id}>
+                      <button
+                        type="button"
+                        onClick={() => selectSuggestion(f)}
+                        className="w-full text-left px-3 py-2.5 text-sm text-slate-200 active:bg-slate-800"
+                      >
+                        {f.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -194,7 +221,7 @@ export function FoodPage() {
               </p>
             )}
 
-            {!matchedFood && name.trim() && (
+            {!matchedFood && name.trim() && suggestions.length === 0 && (
               <div>
                 {!creating ? (
                   <Button variant="secondary" onClick={() => setCreating(true)} className="w-full">
