@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
+  Appointment,
   CheckIn,
   Habit,
   HabitLog,
@@ -13,7 +14,7 @@ import type {
 } from './types'
 
 const DEFAULT_HABITS: Habit[] = [
-  { id: 'habit-stretch', name: 'Stretching' },
+  { id: 'habit-workout', name: 'Workout' },
   { id: 'habit-hydrate', name: 'Hydration' },
   { id: 'habit-walk', name: 'Walk outside' },
 ]
@@ -38,6 +39,7 @@ interface Store {
   habits: Habit[]
   habitLogs: HabitLog[]
   milestones: Milestone[]
+  appointments: Appointment[]
 
   saveCheckIn: (date: string, data: Omit<CheckIn, 'id' | 'date'>) => void
 
@@ -61,6 +63,9 @@ interface Store {
 
   addMilestone: (date: string, title: string, notes?: string) => void
   deleteMilestone: (id: string) => void
+
+  addAppointment: (appt: Omit<Appointment, 'id'>) => void
+  deleteAppointment: (id: string) => void
 }
 
 export const useStore = create<Store>()(
@@ -75,6 +80,7 @@ export const useStore = create<Store>()(
       habits: DEFAULT_HABITS,
       habitLogs: [],
       milestones: [],
+      appointments: [],
 
       saveCheckIn: (date, data) => {
         const existing = get().checkIns.find((c) => c.date === date)
@@ -164,6 +170,11 @@ export const useStore = create<Store>()(
       addMilestone: (date, title, notes) =>
         set({ milestones: [...get().milestones, { id: uid(), date, title, notes }] }),
       deleteMilestone: (id) => set({ milestones: get().milestones.filter((m) => m.id !== id) }),
+
+      addAppointment: (appt) =>
+        set({ appointments: [...get().appointments, { ...appt, id: uid() }] }),
+      deleteAppointment: (id) =>
+        set({ appointments: get().appointments.filter((a) => a.id !== id) }),
     }),
     { name: 'recovery-store' },
   ),

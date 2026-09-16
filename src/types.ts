@@ -64,4 +64,14 @@ export interface Milestone {
   notes?: string
 }
 
+export interface Appointment {
+  id: string
+  date: string // YYYY-MM-DD
+  time?: string // HH:MM
+  title: string
+  provider?: string
+  location?: string
+  notes?: string
+}
+
 export type DateRange = 'week' | 'month' | 'all'

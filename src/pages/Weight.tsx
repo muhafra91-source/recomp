@@ -40,9 +40,9 @@ export function WeightPage() {
         <SectionTitle>Log today's weight</SectionTitle>
         <div className="flex gap-2 items-end">
           <Input
-            type="number"
+            type="text"
             inputMode="decimal"
-            step="0.1"
+            pattern="[0-9]*\.?[0-9]*"
             placeholder={todayEntry ? String(todayEntry.weight) : 'e.g. 75.0'}
             value={value}
             onChange={(e) => setValue(e.target.value)}

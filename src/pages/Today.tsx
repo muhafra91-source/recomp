@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, Flame, Pill } from 'lucide-react'
+import { CalendarClock, Check, ChevronDown, ChevronUp, Flame, Pill } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, ScalePicker, SectionTitle, Textarea } from '../components/ui'
 import { StreakToast } from '../components/Toast'
-import { todayISO } from '../lib/date'
+import { formatDateLabel, todayISO } from '../lib/date'
 import { STREAK_MILESTONES, habitStreak } from '../lib/scoring'
 import { fireConfetti } from '../lib/confetti'
 
@@ -32,6 +32,15 @@ export function TodayPage() {
   const habitLogs = useStore((s) => s.habitLogs)
   const toggleHabit = useStore((s) => s.toggleHabit)
   const habits = useMemo(() => allHabits.filter((h) => !h.archived), [allHabits])
+
+  const appointments = useStore((s) => s.appointments)
+  const nextAppointment = useMemo(
+    () =>
+      [...appointments]
+        .filter((a) => a.date >= today)
+        .sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? '').localeCompare(b.time ?? ''))[0],
+    [appointments, today],
+  )
 
   const [sleepHours, setSleepHours] = useState(checkIn?.sleepHours?.toString() ?? '')
   const [sleepQuality, setSleepQuality] = useState<number | undefined>(checkIn?.sleepQuality)
@@ -111,14 +120,30 @@ export function TodayPage() {
         </p>
       </div>
 
+      {nextAppointment && (
+        <Card className="flex items-center gap-3 bg-teal-500/10 border-teal-500/30">
+          <span className="w-9 h-9 rounded-full bg-teal-500/15 border border-teal-500/40 flex items-center justify-center shrink-0">
+            <CalendarClock size={16} className="text-teal-400" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{nextAppointment.title}</p>
+            <p className="text-xs text-slate-400">
+              {formatDateLabel(nextAppointment.date)}
+              {nextAppointment.time ? ` · ${nextAppointment.time}` : ''}
+              {nextAppointment.provider ? ` · ${nextAppointment.provider}` : ''}
+            </p>
+          </div>
+        </Card>
+      )}
+
       <Card>
         <SectionTitle>Check-in</SectionTitle>
         <div className="flex flex-col gap-4">
           <Input
             label="Sleep hours"
-            type="number"
+            type="text"
             inputMode="decimal"
-            step="0.5"
+            pattern="[0-9]*\.?[0-9]*"
             placeholder="e.g. 7.5"
             value={sleepHours}
             onChange={(e) => setSleepHours(e.target.value)}
@@ -152,9 +177,9 @@ export function TodayPage() {
         <SectionTitle>Weight</SectionTitle>
         <div className="flex gap-2 items-end">
           <Input
-            type="number"
+            type="text"
             inputMode="decimal"
-            step="0.1"
+            pattern="[0-9]*\.?[0-9]*"
             placeholder={todayWeight ? String(todayWeight.weight) : 'e.g. 75.0'}
             value={weightValue}
             onChange={(e) => setWeightValue(e.target.value)}
