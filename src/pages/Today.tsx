@@ -1,16 +1,18 @@
-import { useMemo, useState } from 'react'
-import { CalendarClock, Check, ChevronDown, ChevronUp, Flame, Pill } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, Pill } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, ScalePicker, SectionTitle, Textarea } from '../components/ui'
 import { StreakToast } from '../components/Toast'
-import { formatDateLabel, todayISO } from '../lib/date'
+import { addDaysISO, formatDateLabel, todayISO } from '../lib/date'
 import { STREAK_MILESTONES, habitStreak } from '../lib/scoring'
 import { fireConfetti } from '../lib/confetti'
+import { parseDecimal } from '../lib/number'
 
 export function TodayPage() {
   const today = todayISO()
+  const [selectedDate, setSelectedDate] = useState(today)
 
-  const checkIn = useStore((s) => s.checkIns.find((c) => c.date === today))
+  const checkIns = useStore((s) => s.checkIns)
   const saveCheckIn = useStore((s) => s.saveCheckIn)
 
   const weights = useStore((s) => s.weights)
@@ -42,26 +44,42 @@ export function TodayPage() {
     [appointments, today],
   )
 
-  const [sleepHours, setSleepHours] = useState(checkIn?.sleepHours?.toString() ?? '')
-  const [sleepQuality, setSleepQuality] = useState<number | undefined>(checkIn?.sleepQuality)
-  const [pain, setPain] = useState<number | undefined>(checkIn?.pain)
-  const [energy, setEnergy] = useState<number | undefined>(checkIn?.energy)
-  const [notes, setNotes] = useState(checkIn?.notes ?? '')
-  const [showNotes, setShowNotes] = useState(!!checkIn?.notes)
+  const [sleepHours, setSleepHours] = useState('')
+  const [sleepQuality, setSleepQuality] = useState<number | undefined>(undefined)
+  const [pain, setPain] = useState<number | undefined>(undefined)
+  const [energy, setEnergy] = useState<number | undefined>(undefined)
+  const [notes, setNotes] = useState('')
+  const [showNotes, setShowNotes] = useState(false)
   const [saved, setSaved] = useState(false)
 
   const [weightValue, setWeightValue] = useState('')
-  const todayWeight = weights.find((w) => w.date === today)
-
   const [expandedPT, setExpandedPT] = useState<string | null>(null)
   const [ptDetail, setPtDetail] = useState('')
   const [ptPain, setPtPain] = useState('')
 
   const [toast, setToast] = useState<string | null>(null)
 
+  // Re-hydrate the draft form fields whenever the viewed date changes.
+  useEffect(() => {
+    const c = checkIns.find((c) => c.date === selectedDate)
+    setSleepHours(c?.sleepHours?.toString() ?? '')
+    setSleepQuality(c?.sleepQuality)
+    setPain(c?.pain)
+    setEnergy(c?.energy)
+    setNotes(c?.notes ?? '')
+    setShowNotes(!!c?.notes)
+    setWeightValue('')
+    setExpandedPT(null)
+    setPtDetail('')
+    setPtPain('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate])
+
+  const dateWeight = weights.find((w) => w.date === selectedDate)
+
   function saveCheckInNow() {
-    saveCheckIn(today, {
-      sleepHours: sleepHours ? parseFloat(sleepHours) : undefined,
+    saveCheckIn(selectedDate, {
+      sleepHours: sleepHours ? parseDecimal(sleepHours) : undefined,
       sleepQuality,
       pain,
       energy,
@@ -72,19 +90,19 @@ export function TodayPage() {
   }
 
   function saveWeight() {
-    const n = parseFloat(weightValue)
+    const n = parseDecimal(weightValue)
     if (!Number.isFinite(n) || n <= 0) return
-    addWeight(today, n)
+    addWeight(selectedDate, n)
     setWeightValue('')
   }
 
   function toggleExercise(exerciseId: string) {
-    const log = ptLogs.find((l) => l.date === today && l.exerciseId === exerciseId)
+    const log = ptLogs.find((l) => l.date === selectedDate && l.exerciseId === exerciseId)
     if (log) {
-      unlogPT(today, exerciseId)
+      unlogPT(selectedDate, exerciseId)
       if (expandedPT === exerciseId) setExpandedPT(null)
     } else {
-      logPT(today, exerciseId)
+      logPT(selectedDate, exerciseId)
       setExpandedPT(exerciseId)
       setPtDetail('')
       setPtPain('')
@@ -92,15 +110,15 @@ export function TodayPage() {
   }
 
   function saveExerciseDetail(exerciseId: string) {
-    logPT(today, exerciseId, ptDetail.trim() || undefined, ptPain.trim() || undefined)
+    logPT(selectedDate, exerciseId, ptDetail.trim() || undefined, ptPain.trim() || undefined)
     setExpandedPT(null)
   }
 
   function handleToggleHabit(habitId: string, habitName: string) {
-    const wasDone = habitLogs.some((l) => l.date === today && l.habitId === habitId)
-    toggleHabit(today, habitId)
+    const wasDone = habitLogs.some((l) => l.date === selectedDate && l.habitId === habitId)
+    toggleHabit(selectedDate, habitId)
     if (!wasDone) {
-      const simulatedLogs = [...habitLogs, { id: 'pending', date: today, habitId }]
+      const simulatedLogs = [...habitLogs, { id: 'pending', date: selectedDate, habitId }]
       const newStreak = habitStreak(simulatedLogs, habitId, today)
       if (STREAK_MILESTONES.includes(newStreak)) {
         fireConfetti()
@@ -113,11 +131,28 @@ export function TodayPage() {
     <div className="flex flex-col gap-5">
       {toast && <StreakToast message={toast} onDone={() => setToast(null)} />}
 
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-white">Today</h1>
-        <p className="text-sm text-slate-400">
-          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSelectedDate((d) => addDaysISO(d, -1))}
+            className="p-1.5 text-slate-400 active:text-white transition-colors"
+            aria-label="Previous day"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <span className="text-sm font-medium text-slate-300 w-28 text-center">
+            {formatDateLabel(selectedDate)}
+          </span>
+          <button
+            onClick={() => setSelectedDate((d) => addDaysISO(d, 1))}
+            disabled={selectedDate >= today}
+            className="p-1.5 text-slate-400 active:text-white transition-colors disabled:opacity-30"
+            aria-label="Next day"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
       </div>
 
       {nextAppointment && (
@@ -143,7 +178,7 @@ export function TodayPage() {
             label="Sleep hours"
             type="text"
             inputMode="decimal"
-            pattern="[0-9]*\.?[0-9]*"
+            pattern="[0-9]*[.,]?[0-9]*"
             placeholder="e.g. 7.5"
             value={sleepHours}
             onChange={(e) => setSleepHours(e.target.value)}
@@ -155,7 +190,7 @@ export function TodayPage() {
           {showNotes ? (
             <Textarea
               label="Notes"
-              placeholder="Anything worth flagging today..."
+              placeholder="Anything worth flagging that day..."
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -179,17 +214,21 @@ export function TodayPage() {
           <Input
             type="text"
             inputMode="decimal"
-            pattern="[0-9]*\.?[0-9]*"
-            placeholder={todayWeight ? String(todayWeight.weight) : 'e.g. 75.0'}
+            pattern="[0-9]*[.,]?[0-9]*"
+            placeholder={dateWeight ? String(dateWeight.weight) : 'e.g. 75.0'}
             value={weightValue}
             onChange={(e) => setWeightValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && saveWeight()}
           />
           <Button onClick={saveWeight} className="shrink-0">
-            {todayWeight ? 'Update' : 'Log'}
+            {dateWeight ? 'Update' : 'Log'}
           </Button>
         </div>
-        {todayWeight && <p className="text-xs text-slate-500 mt-2">Today: {todayWeight.weight} kg</p>}
+        {dateWeight && (
+          <p className="text-xs text-slate-500 mt-2">
+            {formatDateLabel(selectedDate)}: {dateWeight.weight} kg
+          </p>
+        )}
       </Card>
 
       <Card>
@@ -199,13 +238,15 @@ export function TodayPage() {
         ) : (
           <ul className="flex flex-col gap-3">
             {medications.map((med) => {
-              const count = medLogs.filter((l) => l.medicationId === med.id && l.date === today).length
+              const count = medLogs.filter(
+                (l) => l.medicationId === med.id && l.date === selectedDate,
+              ).length
               return (
                 <li key={med.id} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white truncate">{med.name}</p>
                     <p className="text-xs text-slate-500">
-                      {med.dosage} · {count}/{med.timesPerDay} today
+                      {med.dosage} · {count}/{med.timesPerDay}
                     </p>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
@@ -214,7 +255,9 @@ export function TodayPage() {
                       return (
                         <button
                           key={i}
-                          onClick={() => (taken ? undoMedDose(med.id, today) : logMedDose(med.id, today))}
+                          onClick={() =>
+                            taken ? undoMedDose(med.id, selectedDate) : logMedDose(med.id, selectedDate)
+                          }
                           className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90 ${
                             taken ? 'bg-teal-500 text-slate-900 animate-pop' : 'bg-slate-800 text-slate-500'
                           }`}
@@ -239,7 +282,7 @@ export function TodayPage() {
         ) : (
           <ul className="flex flex-col gap-2">
             {ptExercises.map((ex) => {
-              const log = ptLogs.find((l) => l.date === today && l.exerciseId === ex.id)
+              const log = ptLogs.find((l) => l.date === selectedDate && l.exerciseId === ex.id)
               const done = !!log
               const expanded = expandedPT === ex.id
               return (
@@ -298,7 +341,7 @@ export function TodayPage() {
         ) : (
           <ul className="flex flex-col gap-2">
             {habits.map((h) => {
-              const done = habitLogs.some((l) => l.date === today && l.habitId === h.id)
+              const done = habitLogs.some((l) => l.date === selectedDate && l.habitId === h.id)
               const streak = habitStreak(habitLogs, h.id, today)
               return (
                 <li key={h.id}>

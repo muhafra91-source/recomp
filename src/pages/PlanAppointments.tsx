@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { CalendarClock, Plus, Trash2 } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, SectionTitle, Textarea } from '../components/ui'
+import { AppointmentCalendar } from '../components/AppointmentCalendar'
 import { formatDateLabel, todayISO } from '../lib/date'
 
 const emptyForm = { date: todayISO(), time: '', title: '', provider: '', location: '', notes: '' }
@@ -13,16 +14,18 @@ export function PlanAppointments() {
 
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
   const today = todayISO()
 
   const { upcoming, past } = useMemo(() => {
-    const sorted = [...appointments].sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? '').localeCompare(b.time ?? ''))
+    const filtered = selectedDay ? appointments.filter((a) => a.date === selectedDay) : appointments
+    const sorted = [...filtered].sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? '').localeCompare(b.time ?? ''))
     return {
       upcoming: sorted.filter((a) => a.date >= today),
       past: sorted.filter((a) => a.date < today).reverse(),
     }
-  }, [appointments, today])
+  }, [appointments, today, selectedDay])
 
   function submit() {
     if (!form.title.trim() || !form.date) return
@@ -103,9 +106,14 @@ export function PlanAppointments() {
       )}
 
       <Card>
+        <SectionTitle>Calendar</SectionTitle>
+        <AppointmentCalendar appointments={appointments} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
+      </Card>
+
+      <Card>
         <SectionTitle>Upcoming</SectionTitle>
         {upcoming.length === 0 ? (
-          <EmptyState text="No upcoming appointments." />
+          <EmptyState text={selectedDay ? 'No upcoming appointments on this day.' : 'No upcoming appointments.'} />
         ) : (
           <ul className="flex flex-col gap-2">
             {upcoming.map((a) => (

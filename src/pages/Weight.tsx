@@ -4,6 +4,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, SectionTitle } from '../components/ui'
 import { formatDateLabel, formatShort, isWithinDays, todayISO } from '../lib/date'
+import { parseDecimal } from '../lib/number'
 import type { DateRange } from '../types'
 
 export function WeightPage() {
@@ -26,7 +27,7 @@ export function WeightPage() {
   const chartData = filtered.map((w) => ({ date: formatShort(w.date), weight: w.weight }))
 
   function submit() {
-    const n = parseFloat(value)
+    const n = parseDecimal(value)
     if (!Number.isFinite(n) || n <= 0) return
     addWeight(today, n)
     setValue('')
@@ -42,7 +43,7 @@ export function WeightPage() {
           <Input
             type="text"
             inputMode="decimal"
-            pattern="[0-9]*\.?[0-9]*"
+            pattern="[0-9]*[.,]?[0-9]*"
             placeholder={todayEntry ? String(todayEntry.weight) : 'e.g. 75.0'}
             value={value}
             onChange={(e) => setValue(e.target.value)}
