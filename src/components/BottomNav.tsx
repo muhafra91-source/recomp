@@ -1,10 +1,10 @@
-import { CalendarCheck, LayoutDashboard, ListChecks, Scale, Settings } from 'lucide-react'
+import { CalendarCheck, CalendarClock, LayoutDashboard, ListChecks, Settings } from 'lucide-react'
 import type { Tab } from '../App'
 
-const items: { id: Tab; label: string; icon: typeof Scale }[] = [
+const items: { id: Tab; label: string; icon: typeof CalendarClock }[] = [
   { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
   { id: 'today', label: 'Today', icon: CalendarCheck },
-  { id: 'weight', label: 'Weight', icon: Scale },
+  { id: 'appointments', label: 'Appts', icon: CalendarClock },
   { id: 'plan', label: 'Plan', icon: ListChecks },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]

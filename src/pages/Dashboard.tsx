@@ -1,13 +1,14 @@
-import { useMemo } from 'react'
-import { Flame, Heart, Moon, Pill, Scale } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Flame, Heart, Moon, Pill, Scale, Trash2 } from 'lucide-react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useStore } from '../store'
 import { Card, EmptyState, SectionTitle, StatTile } from '../components/ui'
 import { CalendarHeatmap } from '../components/CalendarHeatmap'
 import { MilestoneTimeline } from '../components/MilestoneTimeline'
-import { daysAgoISO, formatShort, isWithinDays, todayISO } from '../lib/date'
+import { daysAgoISO, formatDateLabel, formatShort, isWithinDays, todayISO } from '../lib/date'
 import { habitStreak, scoreHex, weeklyRecap, weeklyRecoveryScore } from '../lib/scoring'
 import type { Tab } from '../App'
+import type { DateRange } from '../types'
 
 function average(nums: number[]): number | null {
   if (nums.length === 0) return null
@@ -17,6 +18,7 @@ function average(nums: number[]): number | null {
 export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) => void }) {
   const checkIns = useStore((s) => s.checkIns)
   const weights = useStore((s) => s.weights)
+  const deleteWeight = useStore((s) => s.deleteWeight)
   const allMedications = useStore((s) => s.medications)
   const medLogs = useStore((s) => s.medLogs)
   const allHabits = useStore((s) => s.habits)
@@ -25,6 +27,9 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
 
   const medications = useMemo(() => allMedications.filter((m) => !m.archived), [allMedications])
   const habits = useMemo(() => allHabits.filter((h) => !h.archived), [allHabits])
+
+  const [weightRange, setWeightRange] = useState<DateRange>('month')
+  const [showWeightHistory, setShowWeightHistory] = useState(false)
 
   const today = todayISO()
 
@@ -77,14 +82,17 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
     return days
   }, [checkIns])
 
-  const weightChartData = useMemo(
-    () =>
-      [...weights]
-        .filter((w) => isWithinDays(w.date, 30))
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map((w) => ({ date: formatShort(w.date), weight: w.weight })),
+  const sortedWeights = useMemo(
+    () => [...weights].sort((a, b) => a.date.localeCompare(b.date)),
     [weights],
   )
+  const weightChartData = useMemo(() => {
+    const filtered =
+      weightRange === 'all'
+        ? sortedWeights
+        : sortedWeights.filter((w) => isWithinDays(w.date, weightRange === 'week' ? 7 : 30))
+    return filtered.map((w) => ({ date: formatShort(w.date), weight: w.weight }))
+  }, [sortedWeights, weightRange])
 
   const scorePct = weeklyScore.score ?? 0
   const circumference = 2 * Math.PI * 52
@@ -189,7 +197,22 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
       </Card>
 
       <Card>
-        <SectionTitle>Weight trend (30d)</SectionTitle>
+        <div className="flex items-center justify-between mb-3">
+          <SectionTitle>Weight trend</SectionTitle>
+          <div className="flex gap-1 bg-slate-900 rounded-lg p-1">
+            {(['week', 'month', 'all'] as DateRange[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => setWeightRange(r)}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize transition-colors duration-200 ${
+                  weightRange === r ? 'bg-teal-500 text-slate-900' : 'text-slate-400'
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
         {weightChartData.length > 1 ? (
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={weightChartData} margin={{ left: -20, right: 10 }}>
@@ -205,6 +228,36 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
           </ResponsiveContainer>
         ) : (
           <EmptyState text="Log weight daily to see your trend." />
+        )}
+
+        {sortedWeights.length > 0 && (
+          <>
+            <button
+              onClick={() => setShowWeightHistory((v) => !v)}
+              className="text-xs font-medium text-teal-400 active:text-teal-300 transition-colors mt-3"
+            >
+              {showWeightHistory ? 'Hide history' : `Show history (${sortedWeights.length})`}
+            </button>
+            {showWeightHistory && (
+              <ul className="flex flex-col divide-y divide-slate-700/50 mt-2 animate-fade-in-up">
+                {[...sortedWeights].reverse().map((w) => (
+                  <li key={w.id} className="flex items-center justify-between py-2">
+                    <span className="text-sm text-slate-300">{formatDateLabel(w.date)}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-white">{w.weight} kg</span>
+                      <button
+                        onClick={() => deleteWeight(w.id)}
+                        className="text-slate-500 active:text-red-400"
+                        aria-label={`Delete entry for ${formatDateLabel(w.date)}`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </Card>
 

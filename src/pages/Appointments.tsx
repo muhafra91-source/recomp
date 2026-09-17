@@ -7,7 +7,7 @@ import { formatDateLabel, todayISO } from '../lib/date'
 
 const emptyForm = { date: todayISO(), time: '', title: '', provider: '', location: '', notes: '' }
 
-export function PlanAppointments() {
+export function AppointmentsPage() {
   const appointments = useStore((s) => s.appointments)
   const addAppointment = useStore((s) => s.addAppointment)
   const deleteAppointment = useStore((s) => s.deleteAppointment)
@@ -42,7 +42,9 @@ export function PlanAppointments() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
+      <h1 className="text-xl font-bold text-white">Appointments</h1>
+
       {showForm ? (
         <Card>
           <SectionTitle>Add appointment</SectionTitle>
