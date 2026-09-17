@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Flame, Heart, Moon, Pill, Scale, Trash2 } from 'lucide-react'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useStore } from '../store'
 import { Card, EmptyState, SectionTitle, StatTile } from '../components/ui'
 import { CalendarHeatmap } from '../components/CalendarHeatmap'
 import { MilestoneTimeline } from '../components/MilestoneTimeline'
+import { PostOpBadge } from '../components/PostOpBadge'
+import { UndoBar } from '../components/UndoBar'
+import { useUndoableDelete } from '../lib/useUndoableDelete'
 import { daysAgoISO, formatDateLabel, formatShort, isWithinDays, todayISO } from '../lib/date'
 import { habitStreak, scoreHex, weeklyRecap, weeklyRecoveryScore } from '../lib/scoring'
 import type { Tab } from '../App'
@@ -30,6 +33,7 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
 
   const [weightRange, setWeightRange] = useState<DateRange>('month')
   const [showWeightHistory, setShowWeightHistory] = useState(false)
+  const { pending: pendingWeight, requestDelete: requestDeleteWeight, undo: undoDeleteWeight, isPending: isWeightPending } = useUndoableDelete(deleteWeight)
 
   const today = todayISO()
 
@@ -37,6 +41,16 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
     () => weeklyRecoveryScore(today, { checkIns, medications, medLogs, habits, habitLogs }),
     [today, checkIns, medications, medLogs, habits, habitLogs],
   )
+
+  const scoreHistory = useMemo(() => {
+    const weeks: { label: string; score: number | null }[] = []
+    for (let i = 7; i >= 0; i--) {
+      const end = daysAgoISO(i * 7)
+      const { score } = weeklyRecoveryScore(end, { checkIns, medications, medLogs, habits, habitLogs })
+      weeks.push({ label: formatShort(end), score })
+    }
+    return weeks
+  }, [checkIns, medications, medLogs, habits, habitLogs])
 
   const recap = useMemo(
     () =>
@@ -83,8 +97,8 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
   }, [checkIns])
 
   const sortedWeights = useMemo(
-    () => [...weights].sort((a, b) => a.date.localeCompare(b.date)),
-    [weights],
+    () => weights.filter((w) => !isWeightPending(w.id)).sort((a, b) => a.date.localeCompare(b.date)),
+    [weights, isWeightPending],
   )
   const weightChartData = useMemo(() => {
     const filtered =
@@ -100,8 +114,13 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
 
   return (
     <div className="flex flex-col gap-5">
+      {pendingWeight && <UndoBar label={`Deleted ${pendingWeight.label}`} onUndo={undoDeleteWeight} />}
+
       <div>
-        <h1 className="text-xl font-bold text-white">Overview</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold text-white">Overview</h1>
+          <PostOpBadge />
+        </div>
         <p className="text-sm text-slate-400">
           {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
@@ -135,6 +154,30 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
           <p className="text-sm font-semibold text-white">Weekly recovery score</p>
           <p className="text-xs text-slate-400 leading-relaxed">{recap}</p>
         </div>
+      </Card>
+
+      <Card>
+        <SectionTitle>Score trend (8 weeks)</SectionTitle>
+        {scoreHistory.some((w) => w.score !== null) ? (
+          <ResponsiveContainer width="100%" height={120}>
+            <BarChart data={scoreHistory} margin={{ left: -20, right: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="label" stroke="#64748b" fontSize={10} />
+              <YAxis stroke="#64748b" fontSize={10} domain={[0, 100]} />
+              <Tooltip
+                contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }}
+                labelStyle={{ color: '#e2e8f0' }}
+              />
+              <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                {scoreHistory.map((w, i) => (
+                  <Cell key={i} fill={scoreHex(w.score)} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <EmptyState text="Keep logging to build up your score trend." />
+        )}
       </Card>
 
       <div className="grid grid-cols-2 gap-3">
@@ -246,7 +289,7 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
                     <div className="flex items-center gap-3">
                       <span className="font-semibold text-white">{w.weight} kg</span>
                       <button
-                        onClick={() => deleteWeight(w.id)}
+                        onClick={() => requestDeleteWeight(w.id, `${w.weight} kg entry`)}
                         className="text-slate-500 active:text-red-400"
                         aria-label={`Delete entry for ${formatDateLabel(w.date)}`}
                       >

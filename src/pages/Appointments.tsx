@@ -1,53 +1,90 @@
 import { useMemo, useState } from 'react'
-import { CalendarClock, Plus, Trash2 } from 'lucide-react'
+import { CalendarClock, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, SectionTitle, Textarea } from '../components/ui'
 import { AppointmentCalendar } from '../components/AppointmentCalendar'
+import { UndoBar } from '../components/UndoBar'
+import { useUndoableDelete } from '../lib/useUndoableDelete'
 import { formatDateLabel, todayISO } from '../lib/date'
+import type { Appointment } from '../types'
 
 const emptyForm = { date: todayISO(), time: '', title: '', provider: '', location: '', notes: '' }
 
 export function AppointmentsPage() {
   const appointments = useStore((s) => s.appointments)
   const addAppointment = useStore((s) => s.addAppointment)
+  const updateAppointment = useStore((s) => s.updateAppointment)
   const deleteAppointment = useStore((s) => s.deleteAppointment)
 
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
+  const { pending, requestDelete, undo, isPending } = useUndoableDelete(deleteAppointment)
+
   const today = todayISO()
+  const visibleAppointments = appointments.filter((a) => !isPending(a.id))
 
   const { upcoming, past } = useMemo(() => {
-    const filtered = selectedDay ? appointments.filter((a) => a.date === selectedDay) : appointments
+    const filtered = selectedDay
+      ? visibleAppointments.filter((a) => a.date === selectedDay)
+      : visibleAppointments
     const sorted = [...filtered].sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? '').localeCompare(b.time ?? ''))
     return {
       upcoming: sorted.filter((a) => a.date >= today),
       past: sorted.filter((a) => a.date < today).reverse(),
     }
-  }, [appointments, today, selectedDay])
+  }, [visibleAppointments, today, selectedDay])
+
+  function startAdd() {
+    setEditingId(null)
+    setForm(emptyForm)
+    setShowForm(true)
+  }
+
+  function startEdit(a: Appointment) {
+    setEditingId(a.id)
+    setForm({
+      date: a.date,
+      time: a.time ?? '',
+      title: a.title,
+      provider: a.provider ?? '',
+      location: a.location ?? '',
+      notes: a.notes ?? '',
+    })
+    setShowForm(true)
+  }
 
   function submit() {
     if (!form.title.trim() || !form.date) return
-    addAppointment({
+    const data = {
       date: form.date,
       time: form.time || undefined,
       title: form.title.trim(),
       provider: form.provider.trim() || undefined,
       location: form.location.trim() || undefined,
       notes: form.notes.trim() || undefined,
-    })
+    }
+    if (editingId) {
+      updateAppointment(editingId, data)
+    } else {
+      addAppointment(data)
+    }
     setForm(emptyForm)
+    setEditingId(null)
     setShowForm(false)
   }
 
   return (
     <div className="flex flex-col gap-5">
+      {pending && <UndoBar label={`Deleted ${pending.label}`} onUndo={undo} />}
+
       <h1 className="text-xl font-bold text-white">Appointments</h1>
 
       {showForm ? (
         <Card>
-          <SectionTitle>Add appointment</SectionTitle>
+          <SectionTitle>{editingId ? 'Edit appointment' : 'Add appointment'}</SectionTitle>
           <div className="flex flex-col gap-2.5">
             <div className="grid grid-cols-2 gap-2">
               <Input
@@ -92,7 +129,14 @@ export function AppointmentsPage() {
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
             <div className="flex gap-2 mt-1">
-              <Button variant="secondary" onClick={() => setShowForm(false)} className="flex-1">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowForm(false)
+                  setEditingId(null)
+                }}
+                className="flex-1"
+              >
                 Cancel
               </Button>
               <Button onClick={submit} className="flex-1">
@@ -102,14 +146,14 @@ export function AppointmentsPage() {
           </div>
         </Card>
       ) : (
-        <Button onClick={() => setShowForm(true)} className="flex items-center justify-center gap-2 w-full">
+        <Button onClick={startAdd} className="flex items-center justify-center gap-2 w-full">
           <Plus size={18} /> Add appointment
         </Button>
       )}
 
       <Card>
         <SectionTitle>Calendar</SectionTitle>
-        <AppointmentCalendar appointments={appointments} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
+        <AppointmentCalendar appointments={visibleAppointments} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
       </Card>
 
       <Card>
@@ -138,13 +182,22 @@ export function AppointmentsPage() {
                     {a.notes && <p className="text-xs text-slate-400 mt-1">{a.notes}</p>}
                   </div>
                 </div>
-                <button
-                  onClick={() => deleteAppointment(a.id)}
-                  className="text-slate-500 active:text-red-400 shrink-0"
-                  aria-label={`Delete appointment ${a.title}`}
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => startEdit(a)}
+                    className="text-slate-500 active:text-teal-400"
+                    aria-label={`Edit appointment ${a.title}`}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => requestDelete(a.id, a.title)}
+                    className="text-slate-500 active:text-red-400"
+                    aria-label={`Delete appointment ${a.title}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -164,13 +217,22 @@ export function AppointmentsPage() {
                     {a.provider ? ` · ${a.provider}` : ''}
                   </p>
                 </div>
-                <button
-                  onClick={() => deleteAppointment(a.id)}
-                  className="text-slate-500 active:text-red-400 shrink-0"
-                  aria-label={`Delete appointment ${a.title}`}
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => startEdit(a)}
+                    className="text-slate-500 active:text-teal-400"
+                    aria-label={`Edit appointment ${a.title}`}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => requestDelete(a.id, a.title)}
+                    className="text-slate-500 active:text-red-400"
+                    aria-label={`Delete appointment ${a.title}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

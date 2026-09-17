@@ -3,6 +3,7 @@ import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, ScalePicker, SectionTitle, Textarea } from '../components/ui'
 import { StreakToast } from '../components/Toast'
+import { PostOpBadge } from '../components/PostOpBadge'
 import { addDaysISO, formatDateLabel, todayISO } from '../lib/date'
 import { STREAK_MILESTONES, habitStreak } from '../lib/scoring'
 import { fireConfetti } from '../lib/confetti'
@@ -132,7 +133,10 @@ export function TodayPage() {
       {toast && <StreakToast message={toast} onDone={() => setToast(null)} />}
 
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">Today</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold text-white">Today</h1>
+          <PostOpBadge />
+        </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setSelectedDate((d) => addDaysISO(d, -1))}

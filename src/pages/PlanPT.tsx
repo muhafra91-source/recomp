@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, SectionTitle } from '../components/ui'
+import { UndoBar } from '../components/UndoBar'
+import { useUndoableDelete } from '../lib/useUndoableDelete'
 import { formatDateLabel } from '../lib/date'
 
 const emptyForm = { name: '', target: '' }
@@ -10,19 +12,42 @@ export function PlanPT() {
   const ptExercises = useStore((s) => s.ptExercises)
   const ptLogs = useStore((s) => s.ptLogs)
   const addPTExercise = useStore((s) => s.addPTExercise)
+  const updatePTExercise = useStore((s) => s.updatePTExercise)
   const deletePTExercise = useStore((s) => s.deletePTExercise)
 
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
+
+  const { pending, requestDelete, undo, isPending } = useUndoableDelete(deletePTExercise)
+
+  function startAdd() {
+    setEditingId(null)
+    setForm(emptyForm)
+    setShowForm(true)
+  }
+
+  function startEdit(ex: (typeof ptExercises)[number]) {
+    setEditingId(ex.id)
+    setForm({ name: ex.name, target: ex.target ?? '' })
+    setShowForm(true)
+  }
 
   function submit() {
     if (!form.name.trim()) return
-    addPTExercise(form.name.trim(), form.target.trim() || undefined)
+    const target = form.target.trim() || undefined
+    if (editingId) {
+      updatePTExercise(editingId, form.name.trim(), target)
+    } else {
+      addPTExercise(form.name.trim(), target)
+    }
     setForm(emptyForm)
+    setEditingId(null)
     setShowForm(false)
   }
 
   const exerciseById = useMemo(() => new Map(ptExercises.map((e) => [e.id, e])), [ptExercises])
+  const visibleExercises = ptExercises.filter((e) => !isPending(e.id))
   const grouped = useMemo(() => {
     const map = new Map<string, typeof ptLogs>()
     for (const l of [...ptLogs].sort((a, b) => b.date.localeCompare(a.date))) {
@@ -35,9 +60,11 @@ export function PlanPT() {
 
   return (
     <div className="flex flex-col gap-4">
+      {pending && <UndoBar label={`Deleted ${pending.label}`} onUndo={undo} />}
+
       {showForm ? (
         <Card>
-          <SectionTitle>Add exercise</SectionTitle>
+          <SectionTitle>{editingId ? 'Edit exercise' : 'Add exercise'}</SectionTitle>
           <div className="flex flex-col gap-2.5">
             <Input
               label="Name"
@@ -53,7 +80,14 @@ export function PlanPT() {
               onChange={(e) => setForm({ ...form, target: e.target.value })}
             />
             <div className="flex gap-2 mt-1">
-              <Button variant="secondary" onClick={() => setShowForm(false)} className="flex-1">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowForm(false)
+                  setEditingId(null)
+                }}
+                className="flex-1"
+              >
                 Cancel
               </Button>
               <Button onClick={submit} className="flex-1">
@@ -63,30 +97,39 @@ export function PlanPT() {
           </div>
         </Card>
       ) : (
-        <Button onClick={() => setShowForm(true)} className="flex items-center justify-center gap-2 w-full">
+        <Button onClick={startAdd} className="flex items-center justify-center gap-2 w-full">
           <Plus size={18} /> Add exercise
         </Button>
       )}
 
       <Card>
         <SectionTitle>Exercises</SectionTitle>
-        {ptExercises.length === 0 ? (
+        {visibleExercises.length === 0 ? (
           <EmptyState text="No exercises added yet." />
         ) : (
           <ul className="flex flex-col divide-y divide-slate-700/50">
-            {ptExercises.map((ex) => (
+            {visibleExercises.map((ex) => (
               <li key={ex.id} className="flex items-center justify-between py-2.5 gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-white truncate">{ex.name}</p>
                   {ex.target && <p className="text-xs text-slate-500">{ex.target}</p>}
                 </div>
-                <button
-                  onClick={() => deletePTExercise(ex.id)}
-                  className="text-slate-500 active:text-red-400 shrink-0"
-                  aria-label={`Delete ${ex.name}`}
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => startEdit(ex)}
+                    className="text-slate-500 active:text-teal-400"
+                    aria-label={`Edit ${ex.name}`}
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    onClick={() => requestDelete(ex.id, ex.name)}
+                    className="text-slate-500 active:text-red-400"
+                    aria-label={`Delete ${ex.name}`}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

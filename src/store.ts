@@ -40,6 +40,9 @@ interface Store {
   habitLogs: HabitLog[]
   milestones: Milestone[]
   appointments: Appointment[]
+  surgeryDate: string | null
+
+  setSurgeryDate: (date: string | null) => void
 
   saveCheckIn: (date: string, data: Omit<CheckIn, 'id' | 'date'>) => void
 
@@ -53,18 +56,22 @@ interface Store {
   undoMedDose: (medicationId: string, date: string) => void
 
   addPTExercise: (name: string, target?: string) => PTExercise
+  updatePTExercise: (id: string, name: string, target?: string) => void
   deletePTExercise: (id: string) => void
   logPT: (date: string, exerciseId: string, detail?: string, painNote?: string) => void
   unlogPT: (date: string, exerciseId: string) => void
 
   addHabit: (name: string) => Habit
+  updateHabit: (id: string, name: string) => void
   deleteHabit: (id: string) => void
   toggleHabit: (date: string, habitId: string) => void
 
   addMilestone: (date: string, title: string, notes?: string) => void
+  updateMilestone: (id: string, date: string, title: string, notes?: string) => void
   deleteMilestone: (id: string) => void
 
   addAppointment: (appt: Omit<Appointment, 'id'>) => void
+  updateAppointment: (id: string, appt: Omit<Appointment, 'id'>) => void
   deleteAppointment: (id: string) => void
 }
 
@@ -81,6 +88,9 @@ export const useStore = create<Store>()(
       habitLogs: [],
       milestones: [],
       appointments: [],
+      surgeryDate: null,
+
+      setSurgeryDate: (date) => set({ surgeryDate: date }),
 
       saveCheckIn: (date, data) => {
         const existing = get().checkIns.find((c) => c.date === date)
@@ -130,6 +140,8 @@ export const useStore = create<Store>()(
         set({ ptExercises: [...get().ptExercises, ex] })
         return ex
       },
+      updatePTExercise: (id, name, target) =>
+        set({ ptExercises: get().ptExercises.map((e) => (e.id === id ? { ...e, name, target } : e)) }),
       deletePTExercise: (id) =>
         set({
           ptExercises: get().ptExercises.filter((e) => e.id !== id),
@@ -153,6 +165,7 @@ export const useStore = create<Store>()(
         set({ habits: [...get().habits, habit] })
         return habit
       },
+      updateHabit: (id, name) => set({ habits: get().habits.map((h) => (h.id === id ? { ...h, name } : h)) }),
       deleteHabit: (id) =>
         set({
           habits: get().habits.filter((h) => h.id !== id),
@@ -169,10 +182,14 @@ export const useStore = create<Store>()(
 
       addMilestone: (date, title, notes) =>
         set({ milestones: [...get().milestones, { id: uid(), date, title, notes }] }),
+      updateMilestone: (id, date, title, notes) =>
+        set({ milestones: get().milestones.map((m) => (m.id === id ? { ...m, date, title, notes } : m)) }),
       deleteMilestone: (id) => set({ milestones: get().milestones.filter((m) => m.id !== id) }),
 
       addAppointment: (appt) =>
         set({ appointments: [...get().appointments, { ...appt, id: uid() }] }),
+      updateAppointment: (id, appt) =>
+        set({ appointments: get().appointments.map((a) => (a.id === id ? { ...appt, id } : a)) }),
       deleteAppointment: (id) =>
         set({ appointments: get().appointments.filter((a) => a.id !== id) }),
     }),

@@ -43,3 +43,12 @@ export function daysAgoISO(days: number): string {
 export function isWithinDays(iso: string, days: number): boolean {
   return iso >= daysAgoISO(days - 1)
 }
+
+/** Whole days from `fromISO` to `toISO` (positive if `to` is after `from`). */
+export function daysBetween(fromISO: string, toISO: string): number {
+  const [fy, fm, fd] = fromISO.split('-').map(Number)
+  const [ty, tm, td] = toISO.split('-').map(Number)
+  const from = Date.UTC(fy, fm - 1, fd)
+  const to = Date.UTC(ty, tm - 1, td)
+  return Math.round((to - from) / 86400000)
+}
