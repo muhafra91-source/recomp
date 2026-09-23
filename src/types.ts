@@ -75,3 +75,16 @@ export interface Appointment {
 }
 
 export type DateRange = 'week' | 'month' | 'all'
+
+export interface Supplement {
+  id: string
+  name: string
+  dose?: string // e.g. "1000 IU" or "5 g"
+  archived?: boolean
+}
+
+export interface SupplementLog {
+  id: string
+  date: string // YYYY-MM-DD
+  supplementId: string
+}

@@ -10,6 +10,8 @@ import type {
   Milestone,
   PTExercise,
   PTLog,
+  Supplement,
+  SupplementLog,
   WeightEntry,
 } from './types'
 
@@ -40,6 +42,8 @@ interface Store {
   habitLogs: HabitLog[]
   milestones: Milestone[]
   appointments: Appointment[]
+  supplements: Supplement[]
+  supplementLogs: SupplementLog[]
   surgeryDate: string | null
 
   setSurgeryDate: (date: string | null) => void
@@ -73,6 +77,11 @@ interface Store {
   addAppointment: (appt: Omit<Appointment, 'id'>) => void
   updateAppointment: (id: string, appt: Omit<Appointment, 'id'>) => void
   deleteAppointment: (id: string) => void
+
+  addSupplement: (name: string, dose?: string) => void
+  updateSupplement: (id: string, name: string, dose?: string) => void
+  deleteSupplement: (id: string) => void
+  toggleSupplement: (date: string, supplementId: string) => void
 }
 
 export const useStore = create<Store>()(
@@ -88,6 +97,8 @@ export const useStore = create<Store>()(
       habitLogs: [],
       milestones: [],
       appointments: [],
+      supplements: [],
+      supplementLogs: [],
       surgeryDate: null,
 
       setSurgeryDate: (date) => set({ surgeryDate: date }),
@@ -192,6 +203,24 @@ export const useStore = create<Store>()(
         set({ appointments: get().appointments.map((a) => (a.id === id ? { ...appt, id } : a)) }),
       deleteAppointment: (id) =>
         set({ appointments: get().appointments.filter((a) => a.id !== id) }),
+
+      addSupplement: (name, dose) =>
+        set({ supplements: [...get().supplements, { id: uid(), name, dose }] }),
+      updateSupplement: (id, name, dose) =>
+        set({ supplements: get().supplements.map((s) => (s.id === id ? { ...s, name, dose } : s)) }),
+      deleteSupplement: (id) =>
+        set({
+          supplements: get().supplements.filter((s) => s.id !== id),
+          supplementLogs: get().supplementLogs.filter((l) => l.supplementId !== id),
+        }),
+      toggleSupplement: (date, supplementId) => {
+        const existing = get().supplementLogs.find((l) => l.date === date && l.supplementId === supplementId)
+        if (existing) {
+          set({ supplementLogs: get().supplementLogs.filter((l) => l.id !== existing.id) })
+        } else {
+          set({ supplementLogs: [...get().supplementLogs, { id: uid(), date, supplementId }] })
+        }
+      },
     }),
     { name: 'recovery-store' },
   ),

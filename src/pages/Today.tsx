@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, Pill } from 'lucide-react'
+import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, Leaf, Pill } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, ScalePicker, SectionTitle, Textarea } from '../components/ui'
 import { StreakToast } from '../components/Toast'
@@ -35,6 +35,11 @@ export function TodayPage() {
   const habitLogs = useStore((s) => s.habitLogs)
   const toggleHabit = useStore((s) => s.toggleHabit)
   const habits = useMemo(() => allHabits.filter((h) => !h.archived), [allHabits])
+
+  const allSupplements = useStore((s) => s.supplements)
+  const supplementLogs = useStore((s) => s.supplementLogs)
+  const toggleSupplement = useStore((s) => s.toggleSupplement)
+  const supplements = useMemo(() => allSupplements.filter((s) => !s.archived), [allSupplements])
 
   const appointments = useStore((s) => s.appointments)
   const nextAppointment = useMemo(
@@ -272,6 +277,44 @@ export function TodayPage() {
                       )
                     })}
                   </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
+        <SectionTitle>Supplements</SectionTitle>
+        {supplements.length === 0 ? (
+          <EmptyState text="No supplements added yet. Add them in Plan." />
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {supplements.map((sup) => {
+              const done = supplementLogs.some((l) => l.date === selectedDate && l.supplementId === sup.id)
+              return (
+                <li key={sup.id}>
+                  <button
+                    onClick={() => toggleSupplement(selectedDate, sup.id)}
+                    className="w-full flex items-center justify-between gap-3 rounded-2xl bg-slate-900/60 px-3 py-2.5 transition-colors active:bg-slate-800/60"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 ${
+                          done ? 'bg-teal-500 text-slate-900 animate-pop' : 'border-2 border-slate-600'
+                        }`}
+                      >
+                        {done && <Check size={14} strokeWidth={3} />}
+                      </span>
+                      <div className="min-w-0 text-left">
+                        <p className={`text-sm font-medium truncate ${done ? 'text-white' : 'text-slate-300'}`}>
+                          {sup.name}
+                        </p>
+                        {sup.dose && <p className="text-xs text-slate-500">{sup.dose}</p>}
+                      </div>
+                    </div>
+                    <Leaf size={14} className={done ? 'text-teal-400' : 'text-slate-600'} />
+                  </button>
                 </li>
               )
             })}
