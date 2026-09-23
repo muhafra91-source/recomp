@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, Leaf, Pill } from 'lucide-react'
+import { CalendarClock, Check, ChevronLeft, ChevronRight, Flame, Leaf, Pill } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, ScalePicker, SectionTitle, Textarea } from '../components/ui'
 import { StreakToast } from '../components/Toast'
@@ -24,12 +24,6 @@ export function TodayPage() {
   const logMedDose = useStore((s) => s.logMedDose)
   const undoMedDose = useStore((s) => s.undoMedDose)
   const medications = useMemo(() => allMedications.filter((m) => !m.archived), [allMedications])
-
-  const allPTExercises = useStore((s) => s.ptExercises)
-  const ptLogs = useStore((s) => s.ptLogs)
-  const logPT = useStore((s) => s.logPT)
-  const unlogPT = useStore((s) => s.unlogPT)
-  const ptExercises = useMemo(() => allPTExercises.filter((e) => !e.archived), [allPTExercises])
 
   const allHabits = useStore((s) => s.habits)
   const habitLogs = useStore((s) => s.habitLogs)
@@ -59,9 +53,6 @@ export function TodayPage() {
   const [saved, setSaved] = useState(false)
 
   const [weightValue, setWeightValue] = useState('')
-  const [expandedPT, setExpandedPT] = useState<string | null>(null)
-  const [ptDetail, setPtDetail] = useState('')
-  const [ptPain, setPtPain] = useState('')
 
   const [toast, setToast] = useState<string | null>(null)
 
@@ -75,9 +66,6 @@ export function TodayPage() {
     setNotes(c?.notes ?? '')
     setShowNotes(!!c?.notes)
     setWeightValue('')
-    setExpandedPT(null)
-    setPtDetail('')
-    setPtPain('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate])
 
@@ -100,24 +88,6 @@ export function TodayPage() {
     if (!Number.isFinite(n) || n <= 0) return
     addWeight(selectedDate, n)
     setWeightValue('')
-  }
-
-  function toggleExercise(exerciseId: string) {
-    const log = ptLogs.find((l) => l.date === selectedDate && l.exerciseId === exerciseId)
-    if (log) {
-      unlogPT(selectedDate, exerciseId)
-      if (expandedPT === exerciseId) setExpandedPT(null)
-    } else {
-      logPT(selectedDate, exerciseId)
-      setExpandedPT(exerciseId)
-      setPtDetail('')
-      setPtPain('')
-    }
-  }
-
-  function saveExerciseDetail(exerciseId: string) {
-    logPT(selectedDate, exerciseId, ptDetail.trim() || undefined, ptPain.trim() || undefined)
-    setExpandedPT(null)
   }
 
   function handleToggleHabit(habitId: string, habitName: string) {
@@ -315,65 +285,6 @@ export function TodayPage() {
                     </div>
                     <Leaf size={14} className={done ? 'text-teal-400' : 'text-slate-600'} />
                   </button>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </Card>
-
-      <Card>
-        <SectionTitle>PT exercises</SectionTitle>
-        {ptExercises.length === 0 ? (
-          <EmptyState text="No exercises added yet. Add them in Plan." />
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {ptExercises.map((ex) => {
-              const log = ptLogs.find((l) => l.date === selectedDate && l.exerciseId === ex.id)
-              const done = !!log
-              const expanded = expandedPT === ex.id
-              return (
-                <li key={ex.id} className="rounded-2xl bg-slate-900/60 overflow-hidden">
-                  <button
-                    onClick={() => toggleExercise(ex.id)}
-                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5 transition-colors active:bg-slate-800/60"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 ${
-                          done ? 'bg-teal-500 text-slate-900 animate-pop' : 'border-2 border-slate-600'
-                        }`}
-                      >
-                        {done && <Check size={14} strokeWidth={3} />}
-                      </span>
-                      <div className="min-w-0 text-left">
-                        <p className={`text-sm font-medium truncate ${done ? 'text-white' : 'text-slate-300'}`}>
-                          {ex.name}
-                        </p>
-                        {ex.target && <p className="text-xs text-slate-500">{ex.target}</p>}
-                      </div>
-                    </div>
-                    {done && (expanded ? <ChevronUp size={16} className="text-slate-500" /> : <ChevronDown size={16} className="text-slate-500" />)}
-                  </button>
-                  {done && expanded && (
-                    <div className="flex flex-col gap-2 px-3 pb-3 animate-fade-in-up">
-                      <Input
-                        label="Sets/reps or duration"
-                        placeholder="e.g. 3x10 or 10 min"
-                        value={ptDetail}
-                        onChange={(e) => setPtDetail(e.target.value)}
-                      />
-                      <Input
-                        label="Difficulty / pain note"
-                        placeholder="e.g. mild pinch at end range"
-                        value={ptPain}
-                        onChange={(e) => setPtPain(e.target.value)}
-                      />
-                      <Button variant="secondary" onClick={() => saveExerciseDetail(ex.id)}>
-                        Save details
-                      </Button>
-                    </div>
-                  )}
                 </li>
               )
             })}

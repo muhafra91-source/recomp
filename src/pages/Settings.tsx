@@ -55,7 +55,7 @@ export function SettingsPage() {
       <Card>
         <SectionTitle>Data</SectionTitle>
         <p className="text-xs text-slate-500 mb-3">
-          Everything you log — check-ins, weight, medications, supplements, PT exercises, and habits — is stored
+          Everything you log — check-ins, weight, medications, supplements, and habits — is stored
           locally on this device. Export a backup periodically so you never lose your history.
         </p>
         <Button variant="secondary" onClick={exportData}>

@@ -27,7 +27,6 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
   const medLogs = useStore((s) => s.medLogs)
   const allHabits = useStore((s) => s.habits)
   const habitLogs = useStore((s) => s.habitLogs)
-  const ptLogs = useStore((s) => s.ptLogs)
   const allSupplements = useStore((s) => s.supplements)
   const supplementLogs = useStore((s) => s.supplementLogs)
 
@@ -63,11 +62,10 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
         weights,
         medications,
         medLogs,
-        ptLogDates: ptLogs.map((l) => l.date),
         habits,
         habitLogs,
       }),
-    [today, checkIns, weights, medications, medLogs, ptLogs, habits, habitLogs],
+    [today, checkIns, weights, medications, medLogs, habits, habitLogs],
   )
 
   const last7Pain = useMemo(
