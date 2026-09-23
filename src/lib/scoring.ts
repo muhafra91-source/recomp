@@ -127,7 +127,6 @@ export function weeklyRecap(
     weights: WeightEntry[]
     medications: Medication[]
     medLogs: MedLog[]
-    ptLogDates: string[]
     habits: Habit[]
     habitLogs: HabitLog[]
   },
@@ -139,9 +138,6 @@ export function weeklyRecap(
 
   const weightDays = data.weights.filter((w) => w.date >= weekStart && w.date <= endDate).length
   if (weightDays > 0) fragments.push(`logged weight ${weightDays}/7 days`)
-
-  const ptDays = new Set(data.ptLogDates.filter((d) => d >= weekStart && d <= endDate)).size
-  if (ptDays > 0) fragments.push(`hit PT ${ptDays}/7 days`)
 
   if (data.medications.length > 0) {
     let possible = 0

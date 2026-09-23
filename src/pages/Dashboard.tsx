@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContaine
 import { useStore } from '../store'
 import { Card, EmptyState, SectionTitle, StatTile } from '../components/ui'
 import { CalendarHeatmap } from '../components/CalendarHeatmap'
+import { SupplementChart } from '../components/SupplementChart'
 import { MilestoneTimeline } from '../components/MilestoneTimeline'
 import { PostOpBadge } from '../components/PostOpBadge'
 import { UndoBar } from '../components/UndoBar'
@@ -26,10 +27,12 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
   const medLogs = useStore((s) => s.medLogs)
   const allHabits = useStore((s) => s.habits)
   const habitLogs = useStore((s) => s.habitLogs)
-  const ptLogs = useStore((s) => s.ptLogs)
+  const allSupplements = useStore((s) => s.supplements)
+  const supplementLogs = useStore((s) => s.supplementLogs)
 
   const medications = useMemo(() => allMedications.filter((m) => !m.archived), [allMedications])
   const habits = useMemo(() => allHabits.filter((h) => !h.archived), [allHabits])
+  const supplements = useMemo(() => allSupplements.filter((s) => !s.archived), [allSupplements])
 
   const [weightRange, setWeightRange] = useState<DateRange>('month')
   const [showWeightHistory, setShowWeightHistory] = useState(false)
@@ -59,11 +62,10 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
         weights,
         medications,
         medLogs,
-        ptLogDates: ptLogs.map((l) => l.date),
         habits,
         habitLogs,
       }),
-    [today, checkIns, weights, medications, medLogs, ptLogs, habits, habitLogs],
+    [today, checkIns, weights, medications, medLogs, habits, habitLogs],
   )
 
   const last7Pain = useMemo(
@@ -322,6 +324,15 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
               )
             })}
           </ul>
+        )}
+      </Card>
+
+      <Card>
+        <SectionTitle>Supplements</SectionTitle>
+        {supplements.length === 0 ? (
+          <EmptyState text="Add supplements in Plan to track them here." />
+        ) : (
+          <SupplementChart supplements={supplements} logs={supplementLogs} />
         )}
       </Card>
 

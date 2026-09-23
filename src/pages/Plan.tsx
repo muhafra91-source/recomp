@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { PlanMedications } from './PlanMedications'
-import { PlanPT } from './PlanPT'
 import { PlanHabits } from './PlanHabits'
+import { PlanSupplements } from './PlanSupplements'
 
-type SubTab = 'medications' | 'pt' | 'habits'
+type SubTab = 'medications' | 'supplements' | 'habits'
 
 const subTabs: { id: SubTab; label: string }[] = [
   { id: 'medications', label: 'Meds' },
-  { id: 'pt', label: 'PT' },
+  { id: 'supplements', label: 'Supps' },
   { id: 'habits', label: 'Habits' },
 ]
 
@@ -33,7 +33,7 @@ export function PlanPage() {
       </div>
 
       {sub === 'medications' && <PlanMedications />}
-      {sub === 'pt' && <PlanPT />}
+      {sub === 'supplements' && <PlanSupplements />}
       {sub === 'habits' && <PlanHabits />}
     </div>
   )
