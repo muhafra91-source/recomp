@@ -1,9 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Flame, Pill } from 'lucide-react'
+import {
+  CalendarClock,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Flame,
+  Pill,
+  Trash2,
+} from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Card, EmptyState, Input, ScalePicker, SectionTitle, Textarea } from '../components/ui'
 import { StreakToast } from '../components/Toast'
+import { UndoBar } from '../components/UndoBar'
 import { PostOpBadge } from '../components/PostOpBadge'
+import { useUndoableDelete } from '../lib/useUndoableDelete'
 import { addDaysISO, formatDateLabel, todayISO } from '../lib/date'
 import { STREAK_MILESTONES, habitStreak } from '../lib/scoring'
 import { fireConfetti } from '../lib/confetti'
@@ -29,7 +41,23 @@ export function TodayPage() {
   const ptLogs = useStore((s) => s.ptLogs)
   const logPT = useStore((s) => s.logPT)
   const unlogPT = useStore((s) => s.unlogPT)
-  const ptExercises = useMemo(() => allPTExercises.filter((e) => !e.archived), [allPTExercises])
+  const deletePTExercise = useStore((s) => s.deletePTExercise)
+  const {
+    pending: pendingPT,
+    requestDelete: requestDeletePT,
+    undo: undoDeletePT,
+    isPending: isPTPending,
+  } = useUndoableDelete(deletePTExercise)
+  const ptExercises = useMemo(
+    () => allPTExercises.filter((e) => !e.archived && !isPTPending(e.id)),
+    [allPTExercises, isPTPending],
+  )
+
+  const allSupplements = useStore((s) => s.supplements)
+  const supplementLogs = useStore((s) => s.supplementLogs)
+  const logSupplementDose = useStore((s) => s.logSupplementDose)
+  const undoSupplementDose = useStore((s) => s.undoSupplementDose)
+  const supplements = useMemo(() => allSupplements.filter((s) => !s.archived), [allSupplements])
 
   const allHabits = useStore((s) => s.habits)
   const habitLogs = useStore((s) => s.habitLogs)
@@ -131,6 +159,7 @@ export function TodayPage() {
   return (
     <div className="flex flex-col gap-5">
       {toast && <StreakToast message={toast} onDone={() => setToast(null)} />}
+      {pendingPT && <UndoBar label={`Deleted ${pendingPT.label}`} onUndo={undoDeletePT} />}
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -280,6 +309,54 @@ export function TodayPage() {
       </Card>
 
       <Card>
+        <SectionTitle>Supplements</SectionTitle>
+        {supplements.length === 0 ? (
+          <EmptyState text="No supplements added yet. Add them in Plan." />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {supplements.map((sup) => {
+              const count = supplementLogs.filter(
+                (l) => l.supplementId === sup.id && l.date === selectedDate,
+              ).length
+              return (
+                <li key={sup.id} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{sup.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {sup.dosage} · {count}/{sup.timesPerDay}
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    {Array.from({ length: sup.timesPerDay }, (_, i) => i).map((i) => {
+                      const taken = i < count
+                      return (
+                        <button
+                          key={i}
+                          onClick={() =>
+                            taken
+                              ? undoSupplementDose(sup.id, selectedDate)
+                              : logSupplementDose(sup.id, selectedDate)
+                          }
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90 ${
+                            taken ? 'bg-teal-500 text-slate-900 animate-pop' : 'bg-slate-800 text-slate-500'
+                          }`}
+                          aria-label={
+                            taken ? `Undo dose ${i + 1} of ${sup.name}` : `Log dose ${i + 1} of ${sup.name}`
+                          }
+                        >
+                          <Pill size={14} />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
         <SectionTitle>PT exercises</SectionTitle>
         {ptExercises.length === 0 ? (
           <EmptyState text="No exercises added yet. Add them in Plan." />
@@ -291,27 +368,36 @@ export function TodayPage() {
               const expanded = expandedPT === ex.id
               return (
                 <li key={ex.id} className="rounded-2xl bg-slate-900/60 overflow-hidden">
-                  <button
-                    onClick={() => toggleExercise(ex.id)}
-                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5 transition-colors active:bg-slate-800/60"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 ${
-                          done ? 'bg-teal-500 text-slate-900 animate-pop' : 'border-2 border-slate-600'
-                        }`}
-                      >
-                        {done && <Check size={14} strokeWidth={3} />}
-                      </span>
-                      <div className="min-w-0 text-left">
-                        <p className={`text-sm font-medium truncate ${done ? 'text-white' : 'text-slate-300'}`}>
-                          {ex.name}
-                        </p>
-                        {ex.target && <p className="text-xs text-slate-500">{ex.target}</p>}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => toggleExercise(ex.id)}
+                      className="flex-1 min-w-0 flex items-center justify-between gap-3 px-3 py-2.5 transition-colors active:bg-slate-800/60"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 ${
+                            done ? 'bg-teal-500 text-slate-900 animate-pop' : 'border-2 border-slate-600'
+                          }`}
+                        >
+                          {done && <Check size={14} strokeWidth={3} />}
+                        </span>
+                        <div className="min-w-0 text-left">
+                          <p className={`text-sm font-medium truncate ${done ? 'text-white' : 'text-slate-300'}`}>
+                            {ex.name}
+                          </p>
+                          {ex.target && <p className="text-xs text-slate-500">{ex.target}</p>}
+                        </div>
                       </div>
-                    </div>
-                    {done && (expanded ? <ChevronUp size={16} className="text-slate-500" /> : <ChevronDown size={16} className="text-slate-500" />)}
-                  </button>
+                      {done && (expanded ? <ChevronUp size={16} className="text-slate-500" /> : <ChevronDown size={16} className="text-slate-500" />)}
+                    </button>
+                    <button
+                      onClick={() => requestDeletePT(ex.id, ex.name)}
+                      className="p-2.5 text-slate-500 active:text-red-400 shrink-0"
+                      aria-label={`Delete ${ex.name}`}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                   {done && expanded && (
                     <div className="flex flex-col gap-2 px-3 pb-3 animate-fade-in-up">
                       <Input

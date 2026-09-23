@@ -27,9 +27,12 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
   const allHabits = useStore((s) => s.habits)
   const habitLogs = useStore((s) => s.habitLogs)
   const ptLogs = useStore((s) => s.ptLogs)
+  const allSupplements = useStore((s) => s.supplements)
+  const supplementLogs = useStore((s) => s.supplementLogs)
 
   const medications = useMemo(() => allMedications.filter((m) => !m.archived), [allMedications])
   const habits = useMemo(() => allHabits.filter((h) => !h.archived), [allHabits])
+  const supplements = useMemo(() => allSupplements.filter((s) => !s.archived), [allSupplements])
 
   const [weightRange, setWeightRange] = useState<DateRange>('month')
   const [showWeightHistory, setShowWeightHistory] = useState(false)
@@ -107,6 +110,20 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
         : sortedWeights.filter((w) => isWithinDays(w.date, weightRange === 'week' ? 7 : 30))
     return filtered.map((w) => ({ date: formatShort(w.date), weight: w.weight }))
   }, [sortedWeights, weightRange])
+
+  const supplementConsistency = useMemo(() => {
+    return supplements.map((sup) => {
+      let possible = 0
+      let taken = 0
+      for (let i = 0; i < 30; i++) {
+        const date = daysAgoISO(i)
+        possible += sup.timesPerDay
+        taken += supplementLogs.filter((l) => l.supplementId === sup.id && l.date === date).length
+      }
+      const pct = possible > 0 ? Math.round(Math.min(taken / possible, 1) * 100) : 0
+      return { name: sup.name, pct }
+    })
+  }, [supplements, supplementLogs])
 
   const scorePct = weeklyScore.score ?? 0
   const circumference = 2 * Math.PI * 52
@@ -322,6 +339,47 @@ export function Dashboard({ onNavigate: _onNavigate }: { onNavigate: (t: Tab) =>
               )
             })}
           </ul>
+        )}
+      </Card>
+
+      <Card>
+        <SectionTitle>Supplement consistency (30d)</SectionTitle>
+        {supplementConsistency.length === 0 ? (
+          <EmptyState text="No supplements added yet. Add them in Plan." />
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(80, supplementConsistency.length * 36)}>
+            <BarChart
+              data={supplementConsistency}
+              layout="vertical"
+              margin={{ left: 10, right: 24, top: 0, bottom: 0 }}
+            >
+              <XAxis type="number" domain={[0, 100]} hide />
+              <YAxis
+                type="category"
+                dataKey="name"
+                stroke="#94a3b8"
+                fontSize={12}
+                width={90}
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip
+                contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }}
+                labelStyle={{ color: '#e2e8f0' }}
+                formatter={(value) => [`${value}%`, 'Consistency']}
+              />
+              <Bar
+                dataKey="pct"
+                radius={[0, 6, 6, 0]}
+                barSize={16}
+                label={{ position: 'right', fill: '#94a3b8', fontSize: 11, formatter: ((v: unknown) => `${v}%`) as (v: unknown) => string }}
+              >
+                {supplementConsistency.map((s, i) => (
+                  <Cell key={i} fill={scoreHex(s.pct)} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         )}
       </Card>
 

@@ -74,4 +74,20 @@ export interface Appointment {
   notes?: string
 }
 
+export interface Supplement {
+  id: string
+  name: string
+  dosage: string
+  timesPerDay: number
+  notes?: string
+  archived?: boolean
+}
+
+export interface SupplementLog {
+  id: string
+  supplementId: string
+  date: string // YYYY-MM-DD
+  time: string // HH:MM
+}
+
 export type DateRange = 'week' | 'month' | 'all'

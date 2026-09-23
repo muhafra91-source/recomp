@@ -10,6 +10,8 @@ import type {
   Milestone,
   PTExercise,
   PTLog,
+  Supplement,
+  SupplementLog,
   WeightEntry,
 } from './types'
 
@@ -40,6 +42,8 @@ interface Store {
   habitLogs: HabitLog[]
   milestones: Milestone[]
   appointments: Appointment[]
+  supplements: Supplement[]
+  supplementLogs: SupplementLog[]
   surgeryDate: string | null
 
   setSurgeryDate: (date: string | null) => void
@@ -73,6 +77,12 @@ interface Store {
   addAppointment: (appt: Omit<Appointment, 'id'>) => void
   updateAppointment: (id: string, appt: Omit<Appointment, 'id'>) => void
   deleteAppointment: (id: string) => void
+
+  addSupplement: (supplement: Omit<Supplement, 'id'>) => void
+  updateSupplement: (id: string, supplement: Omit<Supplement, 'id'>) => void
+  deleteSupplement: (id: string) => void
+  logSupplementDose: (supplementId: string, date: string) => void
+  undoSupplementDose: (supplementId: string, date: string) => void
 }
 
 export const useStore = create<Store>()(
@@ -88,6 +98,8 @@ export const useStore = create<Store>()(
       habitLogs: [],
       milestones: [],
       appointments: [],
+      supplements: [],
+      supplementLogs: [],
       surgeryDate: null,
 
       setSurgeryDate: (date) => set({ surgeryDate: date }),
@@ -192,6 +204,29 @@ export const useStore = create<Store>()(
         set({ appointments: get().appointments.map((a) => (a.id === id ? { ...appt, id } : a)) }),
       deleteAppointment: (id) =>
         set({ appointments: get().appointments.filter((a) => a.id !== id) }),
+
+      addSupplement: (supplement) =>
+        set({ supplements: [...get().supplements, { ...supplement, id: uid() }] }),
+      updateSupplement: (id, supplement) =>
+        set({ supplements: get().supplements.map((s) => (s.id === id ? { ...supplement, id } : s)) }),
+      deleteSupplement: (id) =>
+        set({
+          supplements: get().supplements.filter((s) => s.id !== id),
+          supplementLogs: get().supplementLogs.filter((l) => l.supplementId !== id),
+        }),
+      logSupplementDose: (supplementId, date) =>
+        set({
+          supplementLogs: [
+            ...get().supplementLogs,
+            { id: uid(), supplementId, date, time: new Date().toTimeString().slice(0, 5) },
+          ],
+        }),
+      undoSupplementDose: (supplementId, date) => {
+        const logs = get().supplementLogs.filter((l) => l.supplementId === supplementId && l.date === date)
+        const last = logs.at(-1)
+        if (!last) return
+        set({ supplementLogs: get().supplementLogs.filter((l) => l.id !== last.id) })
+      },
     }),
     { name: 'recovery-store' },
   ),
